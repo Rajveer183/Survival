@@ -75,23 +75,8 @@ def plot_km_curves(kmf_dict: dict, title: str = "Kaplan-Meier Survival Probabili
             line=dict(width=3, color=color)
         ))
         
-        # 2. Add CI Area
-        if upper_col in ci.columns and lower_col in ci.columns:
-            fig.add_trace(go.Scatter(
-                x=ci.index.tolist() + ci.index.tolist()[::-1],
-                y=ci[upper_col].tolist() + ci[lower_col].tolist()[::-1],
-                fill='toself',
-                fillcolor=rgba_fill,
-                line=dict(color='rgba(255,255,255,0)'),
-                hoverinfo="skip",
-                showlegend=False
-            ))
-            
-        # 3. Add Median Survival Crosshairs
-        m_val = kmf.median_survival_time_
-        if m_val != np.inf and not np.isnan(m_val):
-            fig.add_shape(type="line", x0=m_val, y0=0, x1=m_val, y1=0.5, line=dict(color=color, width=1, dash="dot"))
-            fig.add_shape(type="line", x0=0, y0=0.5, x1=m_val, y1=0.5, line=dict(color="grey", width=1, dash="dot"))
+        # 2. CI Area and Median Crosshairs removed per user request
+
         
         idx += 1
         
