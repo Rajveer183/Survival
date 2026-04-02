@@ -24,15 +24,6 @@ st.set_page_config(
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
-    /* Force Light Theme Variables */
-    :root {
-        --primary-color: #3b82f6;
-        --background-color: #f0f9ff;
-        --secondary-background-color: #e0f2fe;
-        --text-color: #1e293b;
-        --font: "sans serif";
-    }
-
     /* Hide Streamlit Menu and Deploy button */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -41,10 +32,9 @@ st.markdown("""
     .stApp > header {display:none !important;}
     
     /* Full page background with light blue shades */
-    /* Ensure all text is inherently bigger and clearer and force dark text color */
-    html, body, [data-testid="stAppViewContainer"] {
+    /* Ensure all text is inherently bigger and clearer */
+    html {
         font-size: 110%;
-        color: #1e293b !important;
     }
     
     /* Force st.dataframe text to be larger and bold */
@@ -55,7 +45,6 @@ st.markdown("""
     .stApp {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
         background-attachment: fixed;
-        color: #1e293b !important;
     }
     
     /* Sidebar Styling with Shade */
