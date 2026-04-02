@@ -19,7 +19,7 @@ def set_premium_layout(fig, title, y_title, x_title="Duration (Months)", height=
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top',
-            'font': dict(size=22, color='#000000') # Scaled for shorter headers
+            'font': dict(size=26, color='#000000') # Scaled for high visibility
         },
         template="plotly_white",
         height=height,
@@ -34,16 +34,16 @@ def set_premium_layout(fig, title, y_title, x_title="Duration (Months)", height=
             font=dict(size=14, color='#000000')
         ),
         xaxis=dict(
-            title={'text': x_title, 'font': {'size': 18, 'color': '#000000'}}, # Solid black text
-            tickfont=dict(size=14, color='#000000'),
+            title={'text': x_title, 'font': {'size': 20, 'color': '#000000'}}, # Solid black text
+            tickfont=dict(size=16, color='#000000'),
             gridcolor='#f1f5f9',
             linecolor='#000000', # Solid black axis
             showline=True,
             zeroline=False
         ),
         yaxis=dict(
-            title={'text': y_title, 'font': {'size': 18, 'color': '#000000'}}, # Solid black text
-            tickfont=dict(size=14, color='#000000'),
+            title={'text': y_title, 'font': {'size': 20, 'color': '#000000'}}, # Solid black text
+            tickfont=dict(size=16, color='#000000'),
             gridcolor='#f1f5f9',
             linecolor='#000000', # Solid black axis
             showline=True,
@@ -95,7 +95,7 @@ def plot_km_curves(kmf_dict: dict, title: str = "Kaplan-Meier Survival Probabili
             xref="paper", yref="paper",
             text=f"<b>Log-rank p = {p_value:.4f}</b>",
             showarrow=False,
-            font=dict(size=14, color='#1e3a8a'),
+            font=dict(size=16, color='#1e3a8a'),
             bgcolor="rgba(255,255,255,0.6)",
             bordercolor="rgba(30,58,138,0.2)",
             borderwidth=1, borderpad=4

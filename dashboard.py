@@ -24,6 +24,15 @@ st.set_page_config(
 # --- CUSTOM CSS ---
 st.markdown("""
     <style>
+    /* Force Light Theme Variables */
+    :root {
+        --primary-color: #3b82f6;
+        --background-color: #f0f9ff;
+        --secondary-background-color: #e0f2fe;
+        --text-color: #1e293b;
+        --font: "sans serif";
+    }
+
     /* Hide Streamlit Menu and Deploy button */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
@@ -32,9 +41,21 @@ st.markdown("""
     .stApp > header {display:none !important;}
     
     /* Full page background with light blue shades */
+    /* Ensure all text is inherently bigger and clearer and force dark text color */
+    html, body, [data-testid="stAppViewContainer"] {
+        font-size: 110%;
+        color: #1e293b !important;
+    }
+    
+    /* Force st.dataframe text to be larger and bold */
+    [data-testid="stTable"], [data-testid="stDataFrame"] {
+        font-size: 1.15rem !important;
+    }
+    
     .stApp {
         background: linear-gradient(135deg, #f0f9ff 0%, #e0f2fe 50%, #dbeafe 100%);
         background-attachment: fixed;
+        color: #1e293b !important;
     }
     
     /* Sidebar Styling with Shade */
@@ -59,7 +80,7 @@ st.markdown("""
         -webkit-background-clip: text;
         -webkit-text-fill-color: transparent;
         font-weight: 900;
-        font-size: 2.5rem;
+        font-size: 3.2rem;
         margin: 0;
         letter-spacing: -0.03em;
         padding-bottom: 0.2rem;
@@ -67,18 +88,18 @@ st.markdown("""
     
     .sub-title {
         color: #0c4a6e;
-        font-size: 1rem;
+        font-size: 1.2rem;
         margin: 0.5rem 0 0 0;
         opacity: 0.8;
     }
 
     /* Premium Metric Flashcards */
     .metric-card {
-        padding: 24px;
-        border-radius: 24px;
+        padding: 30px;
+        border-radius: 28px;
         box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         text-align: center;
-        border-top: 6px solid #3b82f6;
+        border-top: 8px solid #3b82f6;
         transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
         border-left: 1px solid rgba(255,255,255,0.2);
         border-right: 1px solid rgba(255,255,255,0.2);
@@ -93,12 +114,13 @@ st.markdown("""
     /* Info Boxes for Results */
     .info-box {
         background-color: #f0f9ff;
-        border-left: 5px solid #3b82f6;
-        padding: 15px;
-        border-radius: 8px;
-        margin: 10px 0;
+        border-left: 6px solid #3b82f6;
+        padding: 20px;
+        border-radius: 12px;
+        margin: 15px 0;
         color: #1e40af;
         box-shadow: 2px 2px 5px rgba(0,0,0,0.02);
+        font-size: 1.1rem;
     }
 
     .stSidebar {
@@ -113,10 +135,10 @@ st.markdown("""
     
     /* Remove padding at top and bottom of main container */
     .block-container {
-        padding-top: 0rem !important;
-        padding-bottom: 0rem !important;
-        padding-left: 2rem !important;
-        padding-right: 2rem !important;
+        padding-top: 0.5rem !important;
+        padding-bottom: 0.5rem !important;
+        padding-left: 3rem !important;
+        padding-right: 3rem !important;
     }
     
     /* Ensure no extra whitespace in sidebar */
@@ -178,7 +200,7 @@ nav_options = [
 # Permanent Full-Width Centered Title
 st.markdown(f"""
     <div style="text-align: center; padding: 1rem 0;">
-        <h1 class="main-title" style="font-size: 3rem; line-height: 1.1;">Multivariate Survival Modeling and <br> Visualization of Cancer Patient Data</h1>
+        <h1 class="main-title" style="font-size: 3.5rem; line-height: 1.1;">Multivariate Survival Modeling and <br> Visualization of Cancer Patient Data</h1>
     </div>
 """, unsafe_allow_html=True)
 
@@ -217,7 +239,7 @@ with header_label_col:
                 -webkit-background-clip: text;
                 -webkit-text-fill-color: transparent;
                 font-weight: 800;
-                font-size: 2.2rem;
+                font-size: 2.4rem;
                 margin: 0;
                 letter-spacing: -0.02em;
             ">{display_title}</h2>
@@ -229,25 +251,29 @@ st.markdown('<div style="margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9
 if selection == "🏠 Dashboard Overview":
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(f'<div class="metric-card" style="background: #e0f2fe; border-top-color: #0ea5e9;"><small style="color: #0369a1; font-weight: 600;">Cohort Size</small><h3 style="color: #0369a1;">{stats["total_obs"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #e0f2fe; border-top-color: #0ea5e9;"><div style="color: #0369a1; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Cohort Size</div><div style="color: #0369a1; font-size: 3.2rem; font-weight: 900;">{stats["total_obs"]}</div></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown(f'<div class="metric-card" style="background: #fee2e2; border-top-color: #ef4444;"><small style="color: #991b1b; font-weight: 600;">Mortality Events</small><h3 style="color: #991b1b;">{stats["events"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #fee2e2; border-top-color: #ef4444;"><div style="color: #991b1b; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Mortality Events</div><div style="color: #991b1b; font-size: 3.2rem; font-weight: 900;">{stats["events"]}</div></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown(f'<div class="metric-card" style="background: #ffedd5; border-top-color: #f97316;"><small style="color: #9a3412; font-weight: 600;">Censored Rate</small><h3 style="color: #9a3412;">{stats["censoring_rate"]}%</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #ffedd5; border-top-color: #f97316;"><div style="color: #9a3412; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Censored Rate</div><div style="color: #9a3412; font-size: 3.2rem; font-weight: 900;">{stats["censoring_rate"]}%</div></div>', unsafe_allow_html=True)
     with col4:
-        st.markdown(f'<div class="metric-card" style="background: #dcfce7; border-top-color: #166534;"><small style="color: #166534; font-weight: 600;">Median Surv.</small><h3 style="color: #166534;">{stats["median_surv"]} Mo.</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #dcfce7; border-top-color: #166534;"><div style="color: #166534; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Median Surv.</div><div style="color: #166534; font-size: 3.2rem; font-weight: 900;">{stats["median_surv"]} Mo.</div></div>', unsafe_allow_html=True)
 
     st.markdown("### 📋 Clinical Cohort Preview")
     # Set ID_REF as the index, align content and style the header row (first row of table)
-    styled_df = df_display.head(10).set_index('ID_REF').style.set_properties(**{'text-align': 'center'})\
+    styled_df = df_display.head(10).set_index('ID_REF').style.set_properties(**{
+        'text-align': 'center',
+        'font-size': '1.2rem' # Bold and large content
+    })\
         .set_table_styles([
             {'selector': 'th', 'props': [
                 ('font-weight', 'bold'), 
                 ('text-align', 'center'), 
                 ('background-color', '#1e293b'), #  background for headers
-                ('color', 'white') # White text for contrast
+                ('color', 'white'), # White text for contrast
+                ('font-size', '1.25rem') # Even larger headers
             ]},
-            {'selector': 'td', 'props': [('text-align', 'center')]}
+            {'selector': 'td', 'props': [('text-align', 'center'), ('font-size', '1.2rem')]}
         ])
     st.dataframe(styled_df, use_container_width=True)
     
@@ -256,9 +282,9 @@ if selection == "🏠 Dashboard Overview":
     CHART_HEIGHT = 500
     TEXT_COLOR = "#000000"
     AXIS_COLOR = "#000000"
-    TITLE_FONT_SIZE = 24
-    AXIS_FONT_SIZE = 18
-    TICK_FONT_SIZE = 14
+    TITLE_FONT_SIZE = 28
+    AXIS_FONT_SIZE = 20
+    TICK_FONT_SIZE = 16
     
     with col_a:
         dist_fig = plot_distribution(df[meta['duration_col']])
@@ -350,7 +376,7 @@ elif selection == "📈 Parametric Survival Models":
             template="plotly_white", 
             title={
                 'text': "<b>Parametric vs. Empirical Survival Rate</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             }, 
             xaxis={'title': 'Follow-up (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
@@ -365,7 +391,7 @@ elif selection == "📈 Parametric Survival Models":
             template="plotly_white", 
             title={
                 'text': "<b>Instantaneous Hazard Rate Analysis</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             },
             xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             yaxis={'title': 'Hazard Density', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
@@ -472,7 +498,7 @@ elif selection == "🔬 Assumptions & Diagnostics":
                 fig_qq.update_layout(
                     title={
                         'text': "<b>Normal Q-Q Plot: Residual Analysis</b>",
-                        'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                        'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
                     },
                     xaxis={'title': 'Theoretical Quantiles', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
                     yaxis={'title': 'Ordered Residuals', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
@@ -497,7 +523,7 @@ elif selection == "🔬 Assumptions & Diagnostics":
             template="plotly_white", 
             title={
                 'text': "<b>Martingale Trend Analysis</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             },
             xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             yaxis={'title': 'Martingale Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
@@ -520,7 +546,7 @@ elif selection == "🔬 Assumptions & Diagnostics":
             template="plotly_white", 
             title={
                 'text': "<b>Deviance Trend Analysis</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             },
             xaxis={'title': 'Timeline (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             yaxis={'title': 'Deviance Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
@@ -698,7 +724,7 @@ elif selection == "🧮 Survival Prediction Tool":
         fig.update_layout(
             title={
                 'text': "<b>Personalized Survival Projection</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 22}
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             },
             xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
