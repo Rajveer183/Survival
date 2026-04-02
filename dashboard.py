@@ -244,7 +244,7 @@ if selection == "🏠 Dashboard Overview":
             {'selector': 'th', 'props': [
                 ('font-weight', 'bold'), 
                 ('text-align', 'center'), 
-                ('background-color', '#1e293b'), # Dark background for headers
+                ('background-color', '#1e293b'), #  background for headers
                 ('color', 'white') # White text for contrast
             ]},
             {'selector': 'td', 'props': [('text-align', 'center')]}
