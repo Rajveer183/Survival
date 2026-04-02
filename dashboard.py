@@ -27,7 +27,9 @@ st.markdown("""
     /* Hide Streamlit Menu and Deploy button */
     #MainMenu {visibility: hidden;}
     footer {visibility: hidden;}
-    header {visibility: hidden;}
+    .stDeployButton, [data-testid="stDeployButton"] {display:none !important;}
+    header[data-testid="stHeader"] {display:none !important;}
+    .stApp > header {display:none !important;}
     
     /* Full page background with light blue shades */
     .stApp {
@@ -44,7 +46,7 @@ st.markdown("""
     /* Header Container - Clean and Top-aligned */
     .header-container {
         padding: 1rem 0;
-        margin-top: -30px;
+        margin-top: 0px;
         margin-bottom: 2rem;
         text-align: center;
         background: rgba(255, 255, 255, 0.3);
@@ -53,10 +55,14 @@ st.markdown("""
     }
     
     .main-title {
-        color: #0369a1;
-        font-weight: 800;
-        font-size: 2.2rem;
+        background: linear-gradient(90deg, #0369a1, #1d4ed8, #7e22ce);
+        -webkit-background-clip: text;
+        -webkit-text-fill-color: transparent;
+        font-weight: 900;
+        font-size: 2.5rem;
         margin: 0;
+        letter-spacing: -0.03em;
+        padding-bottom: 0.2rem;
     }
     
     .sub-title {
@@ -66,14 +72,22 @@ st.markdown("""
         opacity: 0.8;
     }
 
-    /* Metric Cards */
+    /* Premium Metric Flashcards */
     .metric-card {
-        background: white;
         padding: 24px;
-        border-radius: 16px;
-        box-shadow: 0 4px 20px rgba(14, 165, 233, 0.1);
+        border-radius: 24px;
+        box-shadow: 0 4px 15px rgba(0, 0, 0, 0.05);
         text-align: center;
         border-top: 6px solid #3b82f6;
+        transition: all 0.3s cubic-bezier(0.4, 0, 0.2, 1);
+        border-left: 1px solid rgba(255,255,255,0.2);
+        border-right: 1px solid rgba(255,255,255,0.2);
+        cursor: default;
+    }
+    
+    .metric-card:hover {
+        transform: translateY(-8px) scale(1.02);
+        box-shadow: 0 20px 25px -5px rgba(0, 0, 0, 0.1), 0 10px 10px -5px rgba(0, 0, 0, 0.04);
     }
 
     /* Info Boxes for Results */
@@ -96,6 +110,19 @@ st.markdown("""
     .highlight-blue { color: #0369a1; font-weight: bold; }
     .highlight-green { color: #166534; font-weight: bold; }
     .highlight-red { color: #991b1b; font-weight: bold; }
+    
+    /* Remove padding at top and bottom of main container */
+    .block-container {
+        padding-top: 0rem !important;
+        padding-bottom: 0rem !important;
+        padding-left: 2rem !important;
+        padding-right: 2rem !important;
+    }
+    
+    /* Ensure no extra whitespace in sidebar */
+    [data-testid="stSidebar"][aria-expanded="true"] > div:first-child {
+        padding-top: 0rem !important;
+    }
     </style>
 """, unsafe_allow_html=True)
 
@@ -121,129 +148,193 @@ DATA_PATH = "Colorectal Cancer Patient Data.csv"
 @st.cache_data
 def get_analysis_results():
     # Load and run pipeline directly in memory
-    return run_pipeline(DATA_PATH)
+    results = run_pipeline(DATA_PATH)
+    # Preserve raw ID_REF for display (aligned with processed rows)
+    raw = pd.read_csv(DATA_PATH)
+    if 'ID_REF' in raw.columns:
+        results['df_display'] = raw.loc[results['df'].index]
+    else:
+        results['df_display'] = results['df']
+    return results
 
 results = get_analysis_results()
 df = results['df']
+df_display = results['df_display']
 meta = results['meta']
 stats = results['summary_stats']
 
-# --- HEADER ---
+# --- HEADER & NAVIGATION ---
+nav_options = [
+    "🏠 Dashboard Overview",
+    "📉 Non-Parametric Analysis",
+    "📈 Parametric Survival Models",
+    "📊 Multivariate Analysis",
+    "🔬 Assumptions & Diagnostics",
+    "💡 Results Interpretation",
+    "📑 Model Comparison",
+    "🧮 Survival Prediction Tool"
+]
+
+# Permanent Full-Width Centered Title
 st.markdown(f"""
-    <div class="header-container">
-        <h1 class="main-title">Multivariate Survival Modeling and Visualization of Cancer Patient Data</h1>
-        <p class="sub-title">A complete survival suite featuring Non-parametric, Parametric, and Multivariate statistical modeling with diagnostic evaluation.</p>
+    <div style="text-align: center; padding: 1rem 0;">
+        <h1 class="main-title" style="font-size: 3rem; line-height: 1.1;">Multivariate Survival Modeling and <br> Visualization of Cancer Patient Data</h1>
     </div>
 """, unsafe_allow_html=True)
 
-# --- SIDEBAR NAVIGATION ---
-st.sidebar.image("https://cdn-icons-png.flaticon.com/512/3233/3233483.png", width=80)
-st.sidebar.title("Survival Suite")
-selection = st.sidebar.radio(
-    "Navigation",
-    [
-        "🏠 Dashboard Overview",
-        "📉 Non-Parametric Analysis",
-        "📈 Parametric Survival Models",
-        "📊 Multivariate Analysis",
-        "🔬 Assumptions & Diagnostics",
-        "💡 Results Interpretation",
-        "📑 Model Comparison",
-        "🧮 Survival Prediction Tool"
-    ]
-)
+# Define Section Label Mapping for the Teal Headers
+section_labels = {
+    "🏠 Dashboard Overview": "Dashboard Overview",
+    "📉 Non-Parametric Analysis": "Non-Parametric Survival Analysis",
+    "📈 Parametric Survival Models": "Parametric Survival Modeling",
+    "📊 Multivariate Analysis": "Multivariate Survival Analysis",
+    "🔬 Assumptions & Diagnostics": "Assumptions & Diagnostics",
+    "💡 Results Interpretation": "Clinical & Statistical Interpretation",
+    "📑 Model Comparison": "Model Comparison & Selection",
+    "🧮 Survival Prediction Tool": "Patient Survival Prediction Tool"
+}
 
-# --- SECTIONS ---
+# Unified Section Header Row (Centered Title + Navigation in Top Right of section)
+# [1.5, 5, 1.5] ratio ensures the center title has dominance while staying centered
+header_spacer, header_label_col, nav_dropdown_col = st.columns([1.5, 7, 1.5])
+
+# Capturing selection initially
+with nav_dropdown_col:
+    st.markdown('<div style="padding: 1.2rem 0 0 0;">', unsafe_allow_html=True)
+    selection = st.selectbox("Navigation", options=nav_options, label_visibility="collapsed")
+    st.markdown('</div>', unsafe_allow_html=True)
+
+with header_label_col:
+    # Remove the leading emoji/icon from the display title for a cleaner centered look
+    # E.g., "🏠 Dashboard Overview" -> "Dashboard Overview"
+    parts = selection.split(' ', 1)
+    display_title = parts[1] if len(parts) > 1 else selection
+    
+    st.markdown(f"""
+        <div style="text-align: center; padding: 0.5rem 0;">
+            <h2 style="
+                background: linear-gradient(90deg, #0d9488, #14b8a6, #5eead4);
+                -webkit-background-clip: text;
+                -webkit-text-fill-color: transparent;
+                font-weight: 800;
+                font-size: 2.2rem;
+                margin: 0;
+                letter-spacing: -0.02em;
+            ">{display_title}</h2>
+        </div>
+    """, unsafe_allow_html=True)
+
+st.markdown('<div style="margin-bottom: 1.5rem; border-bottom: 2px solid #f1f5f9;"></div>', unsafe_allow_html=True)
 
 if selection == "🏠 Dashboard Overview":
     col1, col2, col3, col4 = st.columns(4)
     with col1:
-        st.markdown(f'<div class="metric-card"><small>Cohort Size</small><h3>{stats["total_obs"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #e0f2fe; border-top-color: #0ea5e9;"><small style="color: #0369a1; font-weight: 600;">Cohort Size</small><h3 style="color: #0369a1;">{stats["total_obs"]}</h3></div>', unsafe_allow_html=True)
     with col2:
-        st.markdown(f'<div class="metric-card"><small>Mortality Events</small><h3>{stats["events"]}</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #fee2e2; border-top-color: #ef4444;"><small style="color: #991b1b; font-weight: 600;">Mortality Events</small><h3 style="color: #991b1b;">{stats["events"]}</h3></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown(f'<div class="metric-card"><small>Censored Rate</small><h3>{stats["censoring_rate"]}%</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #ffedd5; border-top-color: #f97316;"><small style="color: #9a3412; font-weight: 600;">Censored Rate</small><h3 style="color: #9a3412;">{stats["censoring_rate"]}%</h3></div>', unsafe_allow_html=True)
     with col4:
-        st.markdown(f'<div class="metric-card"><small>Median Surv.</small><h3>{stats["median_surv"]} Mo.</h3></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #dcfce7; border-top-color: #166534;"><small style="color: #166534; font-weight: 600;">Median Surv.</small><h3 style="color: #166534;">{stats["median_surv"]} Mo.</h3></div>', unsafe_allow_html=True)
 
-    st.markdown("### Dataset Preview")
-    st.dataframe(df.head(10), use_container_width=True)
+    st.markdown("### 📋 Clinical Cohort Preview")
+    # Set ID_REF as the index, align content and style the header row (first row of table)
+    styled_df = df_display.head(10).set_index('ID_REF').style.set_properties(**{'text-align': 'center'})\
+        .set_table_styles([
+            {'selector': 'th', 'props': [
+                ('font-weight', 'bold'), 
+                ('text-align', 'center'), 
+                ('background-color', '#1e293b'), # Dark background for headers
+                ('color', 'white') # White text for contrast
+            ]},
+            {'selector': 'td', 'props': [('text-align', 'center')]}
+        ])
+    st.dataframe(styled_df, use_container_width=True)
     
     col_a, col_b = st.columns(2)
+    # Define a shared height and dark color palette for chart elements (titles/labels)
+    CHART_HEIGHT = 500
+    TEXT_COLOR = "#000000"
+    AXIS_COLOR = "#000000"
+    TITLE_FONT_SIZE = 24
+    AXIS_FONT_SIZE = 18
+    TICK_FONT_SIZE = 14
+    
     with col_a:
-        st.plotly_chart(plot_distribution(df[meta['duration_col']]), use_container_width=True)
+        dist_fig = plot_distribution(df[meta['duration_col']])
+        st.plotly_chart(dist_fig, use_container_width=True)
     with col_b:
         count_df = pd.DataFrame({'Status': ['Event (Mortality)', 'Censored (Survivor/Lost)'], 'Count': [stats['events'], stats['censored']]})
         fig = px.pie(
             count_df, values='Count', names='Status', 
-            title="Cohort Vital Status Distribution", 
             hole=0.6, 
             color_discrete_sequence=['#ef4444', '#3b82f6']
         )
         fig.update_layout(
+            title={'text': "<b>Vital Status Distribution</b>", 'x': 0.5, 'xanchor': 'center', 'font': {'size': TITLE_FONT_SIZE, 'color': TEXT_COLOR}},
             template="plotly_white",
-            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5)
+            legend=dict(orientation="h", yanchor="bottom", y=-0.2, xanchor="center", x=0.5, font=dict(size=TICK_FONT_SIZE, color=TEXT_COLOR)),
+            height=CHART_HEIGHT,
+            margin=dict(t=100, b=80)
         )
+        fig.update_xaxes(showline=True, linecolor='#000000')
+        fig.update_yaxes(showline=True, linecolor='#000000')
         st.plotly_chart(fig, use_container_width=True)
 
 elif selection == "📉 Non-Parametric Analysis":
-    st.subheader("Kaplan-Meier & Nelson-Aalen Estimation")
-    strata = st.selectbox(
-        "Stratification", 
-        ["None"] + meta['categorical_cols'],
-        format_func=get_display_name
+    # Selection of Stratification Factor displayed horizontally
+    strata = st.radio(
+        "Select Stratification Factor:", 
+        meta['categorical_cols'],
+        format_func=get_display_name,
+        horizontal=True
     )
     
     display_strata = get_display_name(strata)
-    if strata == "None":
-        kmf_dict, naf_dict = results['kmf_overall'], results['naf_overall']
-    else:
-        kmf_dict = fit_kaplan_meier(df, meta['duration_col'], meta['event_col'], group_col=strata)
-        naf_dict = fit_nelson_aalen(df, meta['duration_col'], meta['event_col'], group_col=strata)
+    kmf_dict = fit_kaplan_meier(df, meta['duration_col'], meta['event_col'], group_col=strata)
+    naf_dict = fit_nelson_aalen(df, meta['duration_col'], meta['event_col'], group_col=strata)
     
-    tab1, tab2 = st.tabs(["Kaplan-Meier Survival Analysis", "Nelson-Aalen Cumulative Hazard"])
-    with tab1:
-        p_val = None
-        if strata != "None":
-            lr_res = compare_groups(df, meta['duration_col'], meta['event_col'], strata)
-            if lr_res:
-                p_val = lr_res.p_value
+    p_val = None
+    lr_res = compare_groups(df, meta['duration_col'], meta['event_col'], strata)
+    if lr_res:
+        p_val = lr_res.p_value
         
-        km_title = f"Kaplan-Meier Survival Probability Estimates (Stratified by {display_strata})" if strata != "None" else "Overall Kaplan-Meier Survival Probability Estimate"
+    col_left, col_right = st.columns(2)
+    
+    with col_left:
+        km_title = f"Kaplan-Meier Survival Probability (By {display_strata})"
         st.plotly_chart(plot_km_curves(kmf_dict, title=km_title, p_value=p_val), use_container_width=True)
-        
-        st.markdown("#### Clinical Prognostics: Median & Survival Probabilities")
-        for label, kmf in kmf_dict.items():
-            cols = st.columns(4)
-            m_val = kmf.median_survival_time_
-            disp_med = f"{m_val:.1f} Mo." if m_val != np.inf and not np.isnan(m_val) else "Not Reached"
-            
-            # Probability at milestones
-            p1 = kmf.survival_function_at_times(12).iloc[0]
-            p2 = kmf.survival_function_at_times(24).iloc[0]
-            p5 = kmf.survival_function_at_times(60).iloc[0] if 60 <= kmf.timeline.max() else None
-            
-            p1_bg, p1_text, p1_border = get_sev_color(p1)
-            p2_bg, p2_text, p2_border = get_sev_color(p2)
-            p5_bg, p5_text, p5_border = get_sev_color(p5 if p5 is not None else 0)
-            
-            with cols[0]: st.markdown(f'<div class="info-box" style="border-left: 5px solid #3b82f6;"><small>{label} Median</small><br/><strong>{disp_med}</strong></div>', unsafe_allow_html=True)
-            with cols[1]: st.markdown(f'<div class="info-box" style="background-color: {p1_bg}; border-left: 5px solid {p1_border}; color: {p1_text};"><small>1-Yr Surv.</small><br/><strong>{p1*100:.1f}%</strong></div>', unsafe_allow_html=True)
-            with cols[2]: st.markdown(f'<div class="info-box" style="background-color: {p2_bg}; border-left: 5px solid {p2_border}; color: {p2_text};"><small>2-Yr Surv.</small><br/><strong>{p2*100:.1f}%</strong></div>', unsafe_allow_html=True)
-            with cols[3]: 
-                disp_p5 = f"{p5*100:.1f}%" if p5 is not None else "N/A"
-                if p5 is not None:
-                    st.markdown(f'<div class="info-box" style="background-color: {p5_bg}; border-left: 5px solid {p5_border}; color: {p5_text};"><small>5-Yr Surv.</small><br/><strong>{disp_p5}</strong></div>', unsafe_allow_html=True)
-                else:
-                    st.markdown(f'<div class="info-box"><small>5-Yr Surv.</small><br/><strong>{disp_p5}</strong></div>', unsafe_allow_html=True)
-    with tab2:
-        haz_title = f"Nelson-Aalen Cumulative Hazard Function (Stratified by {display_strata})" if strata != "None" else "Overall Nelson-Aalen Cumulative Hazard Function"
+
+    with col_right:
+        haz_title = f"Nelson-Aalen Cumulative Hazard (By {display_strata})"
         st.plotly_chart(plot_hazard_curves(naf_dict, title=haz_title), use_container_width=True)
+        
+    st.markdown("#### Clinical Prognostics (KM)")
+    for label, kmf in kmf_dict.items():
+        st.markdown(f"**Cohort: {label}**")
+        cols = st.columns(4)
+        m_val = kmf.median_survival_time_
+        disp_med = f"{m_val:.1f} Mo." if m_val != np.inf and not np.isnan(m_val) else "Not Reached"
+        
+        p1 = kmf.survival_function_at_times(12).iloc[0]
+        p2 = kmf.survival_function_at_times(24).iloc[0]
+        p5 = kmf.survival_function_at_times(60).iloc[0] if 60 <= kmf.timeline.max() else None
+        
+        p1_bg, p1_text, p1_border = get_sev_color(p1)
+        p2_bg, p2_text, p2_border = get_sev_color(p2)
+        p5_bg, p5_text, p5_border = get_sev_color(p5 if p5 is not None else 0)
+        
+        with cols[0]: st.markdown(f'<div class="info-box" style="border-left: 5px solid #3b82f6; padding: 10px;"><small>Median</small><br/><strong>{disp_med}</strong></div>', unsafe_allow_html=True)
+        with cols[1]: st.markdown(f'<div class="info-box" style="background-color: {p1_bg}; border-left: 5px solid {p1_border}; color: {p1_text}; padding: 10px;"><small>1-Yr</small><br/><strong>{p1*100:.0f}%</strong></div>', unsafe_allow_html=True)
+        with cols[2]: st.markdown(f'<div class="info-box" style="background-color: {p2_bg}; border-left: 5px solid {p2_border}; color: {p2_text}; padding: 10px;"><small>2-Yr</small><br/><strong>{p2*100:.0f}%</strong></div>', unsafe_allow_html=True)
+        with cols[3]: 
+            disp_p5 = f"{p5*100:.0f}%" if p5 is not None else "N/A"
+            st.markdown(f'<div class="info-box" style="background-color: {p5_bg if p5 else "#f0f9ff"}; border-left: 5px solid {p5_border if p5 else "#3b82f6"}; color: {p5_text if p5 else "#1e40af"}; padding: 10px;"><small>5-Yr</small><br/><strong>{disp_p5}</strong></div>', unsafe_allow_html=True)
 
 elif selection == "📈 Parametric Survival Models":
     p_results, best_model = results['parametric_results'], results['best_parametric']
     st.info(f"Recommended Model: **{best_model}**")
-    sel_mod = st.selectbox("Model Fit", list(p_results.keys()))
+    sel_mod = st.radio("Select Model Fit:", list(p_results.keys()), horizontal=True)
     info = p_results[sel_mod]
     fitter = info['fitter']
     
@@ -255,16 +346,34 @@ elif selection == "📈 Parametric Survival Models":
         timeline = np.linspace(0, df[meta['duration_col']].max(), 100)
         fig.add_trace(go.Scatter(x=timeline.tolist(), y=fitter.survival_function_at_times(timeline).values, 
                                  name=f'{sel_mod} Fit', line=dict(color=COLORS[0], width=CHART_LINE_WIDTH)))
-        fig.update_layout(template="plotly_white", title="<b>Parametric Survival Function Against Kaplan-Meier Estimate</b>", margin=dict(t=50))
+        fig.update_layout(
+            template="plotly_white", 
+            title={
+                'text': "<b>Parametric vs. Empirical Survival Rate</b>",
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+            }, 
+            xaxis={'title': 'Follow-up (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            margin=dict(t=80, b=80, l=80) 
+        )
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=timeline.tolist(), y=fitter.hazard_at_times(timeline).values, 
                                  name=f'{sel_mod} Hazard', line=dict(color=COLORS[1], width=CHART_LINE_WIDTH)))
-        fig.update_layout(template="plotly_white", title="<b>Estimated Hazards Rate (Parametric Modeling)</b>", margin=dict(t=50))
+        fig.update_layout(
+            template="plotly_white", 
+            title={
+                'text': "<b>Instantaneous Hazard Rate Analysis</b>",
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+            },
+            xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Hazard Density', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            margin=dict(t=80, b=80, l=80)
+        )
         st.plotly_chart(fig, use_container_width=True)
     
-    st.markdown("#### Model-Based Predicted Survival Chances")
+    st.markdown("#### ⏳ Predicted Survival Milestones")
     m_cols = st.columns(3)
     p1 = fitter.survival_function_at_times(12).iloc[0]
     p2 = fitter.survival_function_at_times(24).iloc[0]
@@ -302,7 +411,7 @@ elif selection == "📊 Multivariate Analysis":
         st.dataframe(summary_to_show, use_container_width=True)
     with tab2:
         aft_models = results['aft_models']
-        aft_name = st.selectbox("AFT Variant", list(aft_models.keys()))
+        aft_name = st.radio("Select AFT Variant:", list(aft_models.keys()), horizontal=True)
         aft_model = aft_models[aft_name]
         st.write(f"**{aft_name} Model Summary**")
         summ_aft = aft_model.summary.copy()
@@ -323,82 +432,104 @@ elif selection == "📊 Multivariate Analysis":
         plot_df = summ_aft.copy()
         param_col = plot_df.columns[0]
         plot_df['Parameter'] = plot_df[param_col].astype(str)
-        fig = px.bar(plot_df, x='Parameter', y='coef', title=f"Accelerated Failure Time (AFT): {aft_name} Effect Sizes", color='coef', color_continuous_scale='Portland')
-        fig.update_layout(template="plotly_white", margin=dict(t=50))
+        fig = px.bar(plot_df, x='Parameter', y='coef', title=f"<b>AFT Model: {aft_name} Clinical Effects</b>", color='coef', color_continuous_scale='Portland')
+        fig.update_layout(
+            template="plotly_white", 
+            margin=dict(t=80, b=80, l=80),
+            xaxis={'title': 'Covariate', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Effect Intensity', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        )
         st.plotly_chart(fig, use_container_width=True)
 
 elif selection == "🔬 Assumptions & Diagnostics":
     cph, df_enc = results['cph_model'], results['df_encoded']
-    col1, col2 = st.columns(2)
-    with col1:
-        try:
-            cph.check_assumptions(df_enc, p_value_threshold=0.05)
-            st.success("✅ Proportional Hazards assumption met.")
-        except Exception as e:
-            st.warning("⚠️ PH Violations detected. See details below.")
-            st.expander("Diagnostic Output").write(str(e))
-    with col2:
-        res = compute_residuals(cph, df_enc)
-        # Ensure clean_res is a 1D array with enough data points
+    
+    # 1. Compute Residuals first for all plots
+    res = compute_residuals(cph, df_enc)
+    m_ser = res['martingale']
+    d_ser = res['deviance']
+    if hasattr(m_ser, 'iloc'): m_ser = m_ser.iloc[:, 0] if m_ser.ndim > 1 else m_ser
+    if hasattr(d_ser, 'iloc'): d_ser = d_ser.iloc[:, 0] if d_ser.ndim > 1 else d_ser
+    
+    res_df = pd.DataFrame({'M': m_ser, 'D': d_ser})
+    diag_df = res_df.join(df_enc[[meta['duration_col']]]).dropna()
+    diag_df.rename(columns={meta['duration_col']: 'Time', 'M': 'Martingale', 'D': 'Deviance'}, inplace=True)
+
+    # 2. Layout: 2 Above
+    CHART_HEIGHT = 450
+    col_t1, col_t2 = st.columns(2)
+    
+    with col_t1:
+        # Q-Q Plot
         mr = res['martingale'].dropna()
-        if len(mr) > 5:  # Need sufficient points for a meaningful Q-Q plot and regression
+        if len(mr) > 5:
             clean_res = np.asarray(mr.values.flatten(), dtype=np.float64)
             try:
-                # Scipy probplot can be sensitive to shapes in newer versions
                 (osm, osr), (slope, intercept, r) = scipy_stats.probplot(clean_res, dist="norm")
-                osm = np.asarray(osm).flatten()
-                osr = np.asarray(osr).flatten()
-                
                 fig_qq = go.Figure()
                 fig_qq.add_trace(go.Scatter(x=osm.tolist(), y=osr.tolist(), mode='markers', name='Residuals', marker=dict(color='#3b82f6')))
                 fig_qq.add_trace(go.Scatter(x=osm.tolist(), y=(slope*osm + intercept).tolist(), mode='lines', name='Normal Fit', line=dict(color='#ef4444', width=2)))
-                fig_qq.update_layout(title="Normal Q-Q Plot of Martingale Residuals", xaxis_title="Theoretical Quantiles", yaxis_title="Ordered Values")
+                fig_qq.update_layout(
+                    title={
+                        'text': "<b>Normal Q-Q Plot: Residual Analysis</b>",
+                        'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+                    },
+                    xaxis={'title': 'Theoretical Quantiles', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+                    yaxis={'title': 'Ordered Residuals', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+                    template="plotly_white", 
+                    margin=dict(t=80, b=80, l=80), 
+                    height=CHART_HEIGHT
+                )
                 st.plotly_chart(fig_qq, use_container_width=True)
             except Exception as e:
                 st.error(f"Error generating Q-Q plot: {e}")
         else:
-            st.warning("Insufficient residuals to perform Q-Q diagnostics.")
-            
-    col3, col4 = st.columns(2)
-    with col3:
-        # INDESTRUCTIBLE ALIGNMENT LOGIC
-        # Fix: compute_residuals may return a DataFrame or Series. Force to Series if multi-column.
-        m_ser = res['martingale']
-        d_ser = res['deviance']
-        
-        # Extract first column if DataFrame (to fix the length 186 vs 62 issue)
-        if hasattr(m_ser, 'iloc'): m_ser = m_ser.iloc[:, 0] if m_ser.ndim > 1 else m_ser
-        if hasattr(d_ser, 'iloc'): d_ser = d_ser.iloc[:, 0] if d_ser.ndim > 1 else d_ser
-        
-        # Use pandas automatic index alignment (join) matching the fitted dataframe
-        # This solves the "Length of original vs index" mismatch
-        res_df = pd.DataFrame({'M': m_ser, 'D': d_ser})
-        
-        # Join with the time column from the source data
-        diag_df = res_df.join(df_enc[[meta['duration_col']]]).dropna()
-        diag_df.rename(columns={meta['duration_col']: 'Time', 'M': 'Martingale', 'D': 'Deviance'}, inplace=True)
-        
-        # COLORFUL DIAGNOSTIC PLOT
-        fig = px.scatter(diag_df, x='Time', y='Martingale', 
+            st.warning("Insufficient residuals for Q-Q diagnostics.")
+
+    with col_t2:
+        # Martingale Trend Analysis
+        fig_mart = px.scatter(diag_df, x='Time', y='Martingale', 
                          labels={'Time': 'Duration (Months)', 'Martingale': 'Martingale Residual'},
                          title="Martingale Trend Analysis", color_discrete_sequence=[COLORS[0]])
-        fig.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
-        fig.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
-        fig.update_layout(template="plotly_white", margin=dict(t=50))
-        st.plotly_chart(fig, use_container_width=True)
-    with col4:
-        # COLORFUL DIAGNOSTIC PLOT
-        fig = px.scatter(diag_df, x='Time', y='Deviance', 
+        fig_mart.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
+        fig_mart.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
+        fig_mart.update_layout(
+            template="plotly_white", 
+            title={
+                'text': "<b>Martingale Trend Analysis</b>",
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+            },
+            xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Martingale Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            margin=dict(t=80, b=80, l=80), 
+            height=CHART_HEIGHT
+        )
+        st.plotly_chart(fig_mart, use_container_width=True)
+
+    # 3. Layout: 1 Below (Half Width)
+    st.markdown("---")
+    col_b1, col_b2 = st.columns(2)
+    with col_b1:
+        # Deviance Trend Analysis
+        fig_dev = px.scatter(diag_df, x='Time', y='Deviance', 
                          labels={'Time': 'Duration (Months)', 'Deviance': 'Deviance Residual'},
                          title="Deviance Trend Analysis", color_discrete_sequence=[COLORS[1]])
-        fig.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
-        fig.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
-        fig.update_layout(template="plotly_white", margin=dict(t=50))
-        st.plotly_chart(fig, use_container_width=True)
+        fig_dev.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
+        fig_dev.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
+        fig_dev.update_layout(
+            template="plotly_white", 
+            title={
+                'text': "<b>Deviance Trend Analysis</b>",
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 20}
+            },
+            xaxis={'title': 'Timeline (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Deviance Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            margin=dict(t=80, b=80, l=80), 
+            height=CHART_HEIGHT
+        )
+        st.plotly_chart(fig_dev, use_container_width=True)
 
 elif selection == "💡 Results Interpretation":
-    st.markdown("### 🔬 Clinical & Statistical Interpretation")
-    
     # 1. Nature of Hazard Function
     shape = results['hazard_shape']
     st.markdown(f"#### 1. Nature of Hazard Function: :blue[{shape}]")
@@ -413,12 +544,13 @@ elif selection == "💡 Results Interpretation":
         st.info("**Analytical Insight:** The hazard follows a complex or bathtub-shaped pattern, typically seen when high early risk (surgical/treatment toxicity) is followed by a stable period and eventual late-stage recurrence.")
 
     # 2. Effect of Covariates
-    st.markdown("#### 2. Effect of Covariates on Survival Outcomes")
+    st.markdown("#### 2. Effect of Covariates on Survival Outcomes (p < 0.01)")
     summ = results['cph_model'].summary
-    sig = summ[summ['p'] < 0.05]
+    # Applying the requested stricter p-value threshold of 0.01
+    sig = summ[summ['p'] < 0.01]
     
     if not sig.empty:
-        st.markdown("Analytical Evaluation of Significant Variables:")
+        st.markdown(f"Analytical Evaluation of **Highly Significant** Variables (p < 0.01):")
         for idx, row in sig.iterrows():
             display_idx = get_display_name(idx)
             hr = row['exp(coef)']
@@ -428,11 +560,11 @@ elif selection == "💡 Results Interpretation":
             detail = f"""
             - **{display_idx}**: Demonstrates a **{direction}**.
               - *Quantification*: Every unit increase in {display_idx} results in a **{magnitude:.1f}%** {'increase' if hr > 1 else 'reduction'} in the instantaneous risk of mortality.
-              - *Statistical Weight*: The p-value ({row['p']:.4f}) indicates that this covariate is a critical differentiator in patient survival trajectories. Clinical treatment plans should be aggressively adjusted for patients with high values of this predictor.
+              - *Statistical Weight*: The p-value ({row['p']:.4f}) indicates that this covariate is a **primary differentiator** in patient survival trajectories at a high confidence interval (99%).
             """
             st.markdown(detail)
     else:
-        st.warning("No statistically significant factors found at p < 0.05.")
+        st.warning("No statistically significant factors found at the strict p < 0.01 threshold.")
 
     # 3. Practical Implications with better styling
     st.markdown("---")
@@ -468,7 +600,6 @@ elif selection == "📑 Model Comparison":
     st.dataframe(pd.DataFrame(comp).sort_values('AIC'), use_container_width=True)
 
 elif selection == "🧮 Survival Prediction Tool":
-    st.subheader("Patient Clinical Assessment")
     inputs = {}
     cols = st.columns(2)
     for i, cov in enumerate(meta['covariates']):
@@ -477,7 +608,15 @@ elif selection == "🧮 Survival Prediction Tool":
             if cov in meta['categorical_cols']:
                 inputs[cov] = st.selectbox(f"{display_label}", df[cov].unique())
             else:
-                inputs[cov] = st.slider(f"{display_label}", float(df[cov].min()), float(df[cov].max()), float(df[cov].mean()))
+                # Force integers for Age or other whole-number typical fields
+                col_min = int(df[cov].min())
+                col_max = int(df[cov].max())
+                col_val = int(df[cov].mean())
+                
+                if "age" in cov.lower():
+                    inputs[cov] = st.slider(f"{display_label}", col_min, col_max, col_val, step=1)
+                else:
+                    inputs[cov] = st.slider(f"{display_label}", float(df[cov].min()), float(df[cov].max()), float(df[cov].mean()))
     
     if st.button("Generate Comprehensive Clinical Prediction"):
         input_enc = pd.get_dummies(pd.DataFrame([inputs]))
@@ -557,12 +696,16 @@ elif selection == "🧮 Survival Prediction Tool":
         ))
         
         fig.update_layout(
-            title="<b>Projected Patient Survival Trajectory</b>",
-            xaxis_title="Time Following Diagnosis (Months)", 
-            yaxis_title="Probability of Survival", 
+            title={
+                'text': "<b>Personalized Survival Projection</b>",
+                'x': 0.5, 'xanchor': 'center', 'font': {'size': 22}
+            },
+            xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
             template="plotly_white",
             hovermode="x unified",
-            height=450
+            height=500,
+            margin=dict(t=100, b=80, l=80)
         )
         st.plotly_chart(fig, use_container_width=True)
         

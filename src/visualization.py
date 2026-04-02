@@ -15,36 +15,38 @@ def set_premium_layout(fig, title, y_title, x_title="Duration (Months)", height=
     fig.update_layout(
         title={
             'text': f"<b>{title}</b>",
-            'y':0.95,
-            'x':0.05,
-            'xanchor': 'left',
+            'y': 0.95,
+            'x': 0.5,
+            'xanchor': 'center',
             'yanchor': 'top',
-            'font': dict(size=20, color='#1e3a8a')
+            'font': dict(size=22, color='#000000') # Scaled for shorter headers
         },
         template="plotly_white",
         height=height,
         hovermode="x unified",
-        margin=dict(l=70, r=40, t=100, b=80),
+        margin=dict(l=80, r=40, t=100, b=80), # Increased margins to prevent axis "overwrite"
         legend=dict(
-            orientation="v",
-            yanchor="top",
-            y=0.98,
-            xanchor="right",
-            x=0.98,
-            bgcolor='rgba(255,255,255,0.7)',
-            bordercolor="rgba(0,0,0,0.1)",
-            borderwidth=1
+            orientation="h", # Horizontal legend below if it fits
+            yanchor="bottom",
+            y=-0.3,
+            xanchor="center",
+            x=0.5,
+            font=dict(size=14, color='#000000')
         ),
         xaxis=dict(
-            title=x_title,
+            title={'text': x_title, 'font': {'size': 18, 'color': '#000000'}}, # Solid black text
+            tickfont=dict(size=14, color='#000000'),
             gridcolor='#f1f5f9',
-            linecolor='#cbd5e1',
+            linecolor='#000000', # Solid black axis
+            showline=True,
             zeroline=False
         ),
         yaxis=dict(
-            title=y_title,
+            title={'text': y_title, 'font': {'size': 18, 'color': '#000000'}}, # Solid black text
+            tickfont=dict(size=14, color='#000000'),
             gridcolor='#f1f5f9',
-            linecolor='#cbd5e1',
+            linecolor='#000000', # Solid black axis
+            showline=True,
             zeroline=False
         ),
         plot_bgcolor='white'
@@ -148,14 +150,14 @@ def plot_forest_cox(cph, display_map=None):
     set_premium_layout(fig, "Cox Proportional Hazards Model: Hazard Ratio Forest Plot", "Clinical Predictors", "Log Hazard Ratio")
     return fig
 
-def plot_distribution(series, title="Duration Distribution"):
+def plot_distribution(series, title="In-Time Cohort Distribution"):
     fig = px.histogram(
         series, 
         nbins=20,
         labels={'value': 'Duration (Months)'},
         color_discrete_sequence=[COLORS[0]]
     )
-    set_premium_layout(fig, title, "Frequency (Patient Count)")
+    set_premium_layout(fig, title, "Patient Count", "Duration (Months)")
     fig.update_layout(bargap=0.1)
     return fig
 
