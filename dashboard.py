@@ -154,21 +154,22 @@ def get_display_name(col):
     return DISPLAY_NAME_MAP.get(col, col)
 
 # --- DATA LOADING ---
-DATA_PATH = "Colorectal Cancer Patient Data.csv"
+DATA_PATH = "Colorectal Cancer Patient Data_new.csv"
 
-@st.cache_data
-def get_analysis_results():
+@st.cache_data(ttl=3600)
+def get_analysis_results(data_path, mtime):
     # Load and run pipeline directly in memory
-    results = run_pipeline(DATA_PATH)
+    results = run_pipeline(data_path)
     # Preserve raw ID_REF for display (aligned with processed rows)
-    raw = pd.read_csv(DATA_PATH)
+    raw = pd.read_csv(data_path)
     if 'ID_REF' in raw.columns:
         results['df_display'] = raw.loc[results['df'].index]
     else:
         results['df_display'] = results['df']
     return results
 
-results = get_analysis_results()
+RESULTS_MTIME = os.path.getmtime(DATA_PATH)
+results = get_analysis_results(DATA_PATH, RESULTS_MTIME)
 df = results['df']
 df_display = results['df_display']
 meta = results['meta']
@@ -244,7 +245,7 @@ if selection == "🏠 Dashboard Overview":
     with col2:
         st.markdown(f'<div class="metric-card" style="background: #fee2e2; border-top-color: #ef4444;"><div style="color: #991b1b; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Mortality Events</div><div style="color: #991b1b; font-size: 3.2rem; font-weight: 900;">{stats["events"]}</div></div>', unsafe_allow_html=True)
     with col3:
-        st.markdown(f'<div class="metric-card" style="background: #ffedd5; border-top-color: #f97316;"><div style="color: #9a3412; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Censored Rate</div><div style="color: #9a3412; font-size: 3.2rem; font-weight: 900;">{stats["censoring_rate"]}%</div></div>', unsafe_allow_html=True)
+        st.markdown(f'<div class="metric-card" style="background: #ffedd5; border-top-color: #f97316;"><div style="color: #9a3412; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Censored Rate</div><div style="color: #9a3412; font-size: 3.2rem; font-weight: 900;">{stats["censored"]}</div></div>', unsafe_allow_html=True)
     with col4:
         st.markdown(f'<div class="metric-card" style="background: #dcfce7; border-top-color: #166534;"><div style="color: #166534; font-weight: 700; font-size: 1.4rem; margin-bottom: 10px;">Median Surv.</div><div style="color: #166534; font-size: 3.2rem; font-weight: 900;">{stats["median_surv"]} Mo.</div></div>', unsafe_allow_html=True)
 
@@ -277,13 +278,23 @@ if selection == "🏠 Dashboard Overview":
     
     with col_a:
         dist_fig = plot_distribution(df[meta['duration_col']])
+        dist_fig.update_traces(
+            hovertemplate="<span style='font-size:36px; font-weight:bold;'>Duration: %{x} Mo.</span><br><span style='font-size:36px;'>Count: %{y}</span><extra></extra>"
+        )
+        dist_fig.update_layout(hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white"))
         st.plotly_chart(dist_fig, use_container_width=True)
     with col_b:
-        count_df = pd.DataFrame({'Status': ['Event (Mortality)', 'Censored (Survivor/Lost)'], 'Count': [stats['events'], stats['censored']]})
+        count_df = pd.DataFrame({'Status': ['Mortality', 'Censored'], 'Count': [stats['events'], stats['censored']]})
         fig = px.pie(
             count_df, values='Count', names='Status', 
             hole=0.6, 
             color_discrete_sequence=['#ef4444', '#3b82f6']
+        )
+        fig.update_traces(
+            textinfo='percent',
+            textfont_size=18,
+            hovertemplate="<b>%{label}</b><br>Value: %{value}<extra></extra>",
+            hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white")
         )
         fig.update_layout(
             title={'text': "<b>Vital Status Distribution</b>", 'x': 0.5, 'xanchor': 'center', 'font': {'size': TITLE_FONT_SIZE, 'color': TEXT_COLOR}},
@@ -318,11 +329,23 @@ elif selection == "📉 Non-Parametric Analysis":
     
     with col_left:
         km_title = f"Kaplan-Meier Survival Probability (By {display_strata})"
-        st.plotly_chart(plot_km_curves(kmf_dict, title=km_title, p_value=p_val), use_container_width=True)
+        km_fig = plot_km_curves(kmf_dict, title=km_title, p_value=p_val)
+        km_fig.update_traces(
+            hovertemplate="<span style='font-size:36px;'>Surv: %{y:.1%}</span><extra></extra>"
+        )
+        km_fig.update_xaxes(tickprefix="Duration: ", ticksuffix=" Month", showtickprefix="first", showticksuffix="first")
+        km_fig.update_layout(hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white"))
+        st.plotly_chart(km_fig, use_container_width=True)
 
     with col_right:
         haz_title = f"Nelson-Aalen Cumulative Hazard (By {display_strata})"
-        st.plotly_chart(plot_hazard_curves(naf_dict, title=haz_title), use_container_width=True)
+        haz_fig = plot_hazard_curves(naf_dict, title=haz_title)
+        haz_fig.update_traces(
+            hovertemplate="<span style='font-size:36px;'>Haz: %{y:.2f}</span><extra></extra>"
+        )
+        haz_fig.update_xaxes(tickprefix="Duration: ", ticksuffix=" Month", showtickprefix="first", showticksuffix="first")
+        haz_fig.update_layout(hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white"))
+        st.plotly_chart(haz_fig, use_container_width=True)
         
     st.markdown("#### Clinical Prognostics (KM)")
     for label, kmf in kmf_dict.items():
@@ -558,28 +581,29 @@ elif selection == "💡 Results Interpretation":
     else:
         st.info("**Analytical Insight:** The hazard follows a complex or bathtub-shaped pattern, typically seen when high early risk (surgical/treatment toxicity) is followed by a stable period and eventual late-stage recurrence.")
 
-    # 2. Effect of Covariates
-    st.markdown("#### 2. Effect of Covariates on Survival Outcomes (p < 0.01)")
+    # 2. Clinical Evaluation of Covariate Impacts (All Factors)
+    st.markdown("#### 2. Clinical Evaluation of Covariate Impacts")
     summ = results['cph_model'].summary
-    # Applying the requested stricter p-value threshold of 0.01
-    sig = summ[summ['p'] < 0.01]
     
-    if not sig.empty:
-        st.markdown(f"Analytical Evaluation of **Highly Significant** Variables (p < 0.01):")
-        for idx, row in sig.iterrows():
-            display_idx = get_display_name(idx)
-            hr = row['exp(coef)']
-            direction = "Hazard Elevation" if hr > 1 else "Protective Effect"
-            magnitude = abs(hr - 1) * 100
-            
-            detail = f"""
-            - **{display_idx}**: Demonstrates a **{direction}**.
-              - *Quantification*: Every unit increase in {display_idx} results in a **{magnitude:.1f}%** {'increase' if hr > 1 else 'reduction'} in the instantaneous risk of mortality.
-              - *Statistical Weight*: The p-value ({row['p']:.4f}) indicates that this covariate is a **primary differentiator** in patient survival trajectories at a high confidence interval (99%).
-            """
-            st.markdown(detail)
-    else:
-        st.warning("No statistically significant factors found at the strict p < 0.01 threshold.")
+    for idx, row in summ.iterrows():
+        display_idx = get_display_name(idx)
+        hr = row['exp(coef)']
+        p_val = row['p']
+        direction = "Hazard Elevation" if hr > 1 else "Protective Effect"
+        magnitude = abs(hr - 1) * 100
+        
+        # Color coding markers
+        if p_val < 0.01: marker = "🔴 **Critical (p < 0.01)**"
+        elif p_val < 0.05: marker = "🟠 **Significant (p < 0.05)**"
+        else: marker = "🔵 **Observation (p >= 0.05)**"
+        
+        st.markdown(f"**{display_idx}** — {marker}")
+        st.markdown(f"""
+        - *Direction*: {direction}
+        - *Impact*: {magnitude:.1f}% {'increase' if hr > 1 else 'reduction'} in risk.
+        - *Hazard Ratio*: {hr:.4f}
+        """)
+        st.write("")
 
     # 3. Practical Implications with better styling
     st.markdown("---")
@@ -596,11 +620,24 @@ elif selection == "💡 Results Interpretation":
         </div>
         """, unsafe_allow_html=True)
     with imp_col2:
+        # Calculate dynamic window around median survival
+        med_val = stats["median_surv"]
+        try:
+            med_float = float(med_val)
+            if np.isfinite(med_float):
+                window_start = max(0, med_float - 6)
+                window_end = med_float + 6
+                window_text = f"the {window_start:.0f}-{window_end:.1f} month window"
+            else:
+                window_text = "the late-stage recovery phase"
+        except:
+            window_text = "the post-observation phase"
+            
         st.markdown(f"""
         <div style="background-color: #eff6ff; padding: 20px; border-radius: 12px; border-left: 6px solid #3b82f6;">
             <h5 style="color: #1e40af;">Observation Optimization</h5>
             <p style="font-size: 0.95rem; color: #1e3a8a;">
-            The <b>24-36 month window</b> shows the sharpest decline in survival. 
+            Critical survival dynamics are observed around <b>{window_text}</b>. 
             Intensive radiological monitoring is critical during this period.
             </p>
         </div>
@@ -633,102 +670,111 @@ elif selection == "🧮 Survival Prediction Tool":
                 else:
                     inputs[cov] = st.slider(f"{display_label}", float(df[cov].min()), float(df[cov].max()), float(df[cov].mean()))
     
-    if st.button("Generate Comprehensive Clinical Prediction"):
-        input_enc = pd.get_dummies(pd.DataFrame([inputs]))
-        train_cols = results['df_encoded'].drop(columns=[meta['duration_col'], meta['event_col']]).columns
-        for c in train_cols:
-            if c not in input_enc.columns: input_enc[c] = 0
-        input_enc = input_enc[train_cols]
-        
-        cph = results['cph_model']
-        pred_surv = cph.predict_survival_function(input_enc)
-        
-        # Area Under Curve for Life Expectancy (RMST)
-        times = pred_surv.index.values
-        surv_vals = pred_surv.iloc[:, 0].values
-        # Use np.trapezoid (NumPy 2.0+) or fallback for compatibility
-        try:
-            expected_months = np.trapezoid(surv_vals, times)
-        except AttributeError:
-            expected_months = np.trapz(surv_vals, times)
-        
-        # Survival probabilities at milestones
-        milestones = [12, 24, 60]
-        prob_milestones = {}
-        for m in milestones:
-            if m <= times.max():
-                prob = cph.predict_survival_function(input_enc, times=[m]).iloc[0, 0]
-                prob_milestones[m] = f"{prob*100:.1f}%"
-            else:
-                prob_milestones[m] = "Beyond Data"
-
-        st.markdown("### 📊 Patient-Specific Survival Prognosis")
-        
-        # Check median to conditionally display
-        try: med = cph.predict_median(input_enc).iloc[0]
-        except: med = np.inf
-        
-        if med != np.inf and not np.isnan(med):
-            col_m1, col_m2, col_m3 = st.columns(3)
+    # Dynamic Prediction (auto-updates on change)
+    st.markdown("---")
+    input_df = pd.DataFrame([inputs])
+    
+    # Ensure categorical types are consistent with training data for correct dummy encoding
+    for col in meta['categorical_cols']:
+        if col in input_df.columns:
+            input_df[col] = pd.Categorical(input_df[col], categories=results['df'][col].cat.categories)
+    
+    input_enc = pd.get_dummies(input_df, columns=meta['categorical_cols'], drop_first=True)
+    
+    train_cols = results['df_encoded'].drop(columns=[meta['duration_col'], meta['event_col']]).columns
+    for c in train_cols:
+        if c not in input_enc.columns: input_enc[c] = 0
+    input_enc = input_enc[train_cols]
+    
+    cph = results['cph_model']
+    pred_surv = cph.predict_survival_function(input_enc)
+    
+    # Area Under Curve for Life Expectancy (RMST)
+    times = pred_surv.index.values
+    surv_vals = pred_surv.iloc[:, 0].values
+    # Use np.trapezoid (NumPy 2.0+) or fallback for compatibility
+    try:
+        expected_months = np.trapezoid(surv_vals, times)
+    except AttributeError:
+        expected_months = np.trapz(surv_vals, times)
+    
+    # Survival probabilities at milestones
+    milestones = [12, 24, 60]
+    prob_milestones = {}
+    for m in milestones:
+        if m <= times.max():
+            prob = cph.predict_survival_function(input_enc, times=[m]).iloc[0, 0]
+            prob_milestones[m] = f"{prob*100:.1f}%"
         else:
-            col_m1, col_m2 = st.columns(2)
-            col_m3 = None
-            
-        with col_m1:
-            st.metric("Predicted Survival Time", f"{expected_months:.1f} Months", help="Technically RMST: The average expected months of survival based on the cohort data.")
-        with col_m2:
-            st.metric("Relative Hazard Score", f"{cph.predict_partial_hazard(input_enc).iloc[0]:.2f}")
-        if col_m3:
-            st.metric("Median Survival", f"{med:.1f} Mo.")
+            prob_milestones[m] = "Beyond Data"
 
-        st.markdown("#### Chance of Survival by Timeframe")
-        p1_bg, p1_text, p1_border = get_sev_color(float(prob_milestones[12].strip('%'))/100 if "Beyond" not in prob_milestones[12] else 0)
-        p2_bg, p2_text, p2_border = get_sev_color(float(prob_milestones[24].strip('%'))/100 if "Beyond" not in prob_milestones[24] else 0)
-        p5_bg, p5_text, p5_border = get_sev_color(float(prob_milestones[60].strip('%'))/100 if "Beyond" not in prob_milestones[60] else 0)
+    st.markdown("### 📊 Patient-Specific Survival Prognosis")
+    
+    # Check median to conditionally display
+    try: med = cph.predict_median(input_enc).iloc[0]
+    except: med = np.inf
+    
+    if med != np.inf and not np.isnan(med):
+        col_m1, col_m2, col_m3 = st.columns(3)
+    else:
+        col_m1, col_m2 = st.columns(2)
+        col_m3 = None
         
-        m_cols = st.columns(3)
-        milestone_data = [
-            (12, prob_milestones[12], p1_bg, p1_text, p1_border),
-            (24, prob_milestones[24], p2_bg, p2_text, p2_border),
-            (60, prob_milestones[60], p5_bg, p5_text, p5_border)
-        ]
-        
-        for i, (m, p, bg, txt, brd) in enumerate(milestone_data):
-            m_cols[i].markdown(f"""
-            <div class="info-box" style="text-align: center; background-color: {bg}; border-left: 5px solid {brd}; color: {txt};">
-                <small>{m} Months Survival Chance</small><br/>
-                <strong style="font-size: 1.4rem;">{p}</strong>
-            </div>
-            """, unsafe_allow_html=True)
-        
-        fig = go.Figure(go.Scatter(
-            x=pred_surv.index.tolist(), 
-            y=pred_surv.iloc[:,0].values, 
-            name="Clinical Pathway", 
-            line=dict(color='#0ea5e9', width=CHART_LINE_WIDTH),
-            fill='tozeroy',
-            fillcolor='rgba(14, 165, 233, 0.05)'
-        ))
-        
-        fig.update_layout(
-            title={
-                'text': "<b>Personalized Survival Projection</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
-            },
-            xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            template="plotly_white",
-            hovermode="x unified",
-            height=500,
-            margin=dict(t=100, b=80, l=80)
-        )
-        st.plotly_chart(fig, use_container_width=True)
-        
-        # Stratification Logic
-        risk_score = cph.predict_partial_hazard(input_enc).iloc[0]
-        mean_risk = cph.predict_partial_hazard(results['df_encoded'].drop(columns=[meta['duration_col'], meta['event_col']])).mean()
-        strat = clinical_risk_stratification(risk_score, mean_risk)
-        st.subheader(f"Risk Category: :blue[{strat}]")
+    with col_m1:
+        st.metric("Predicted Survival Time", f"{expected_months:.1f} Months", help="Technically RMST: The average expected months of survival based on the cohort data.")
+    with col_m2:
+        st.metric("Relative Hazard Score", f"{cph.predict_partial_hazard(input_enc).iloc[0]:.2f}")
+    if col_m3:
+        st.metric("Median Survival", f"{med:.1f} Mo.")
+
+    st.markdown("#### Chance of Survival by Timeframe")
+    p1_bg, p1_text, p1_border = get_sev_color(float(prob_milestones[12].strip('%'))/100 if "Beyond" not in prob_milestones[12] else 0)
+    p2_bg, p2_text, p2_border = get_sev_color(float(prob_milestones[24].strip('%'))/100 if "Beyond" not in prob_milestones[24] else 0)
+    p5_bg, p5_text, p5_border = get_sev_color(float(prob_milestones[60].strip('%'))/100 if "Beyond" not in prob_milestones[60] else 0)
+    
+    m_cols = st.columns(3)
+    milestone_data = [
+        (12, prob_milestones[12], p1_bg, p1_text, p1_border),
+        (24, prob_milestones[24], p2_bg, p2_text, p2_border),
+        (60, prob_milestones[60], p5_bg, p5_text, p5_border)
+    ]
+    
+    for i, (m, p, bg, txt, brd) in enumerate(milestone_data):
+        m_cols[i].markdown(f"""
+        <div class="info-box" style="text-align: center; background-color: {bg}; border-left: 5px solid {brd}; color: {txt};">
+            <small>{m} Months Survival Chance</small><br/>
+            <strong style="font-size: 1.4rem;">{p}</strong>
+        </div>
+        """, unsafe_allow_html=True)
+    
+    fig = go.Figure(go.Scatter(
+        x=pred_surv.index.tolist(), 
+        y=pred_surv.iloc[:,0].values, 
+        name="Clinical Pathway", 
+        line=dict(color='#0ea5e9', width=CHART_LINE_WIDTH),
+        fill='tozeroy',
+        fillcolor='rgba(14, 165, 233, 0.05)'
+    ))
+    
+    fig.update_layout(
+        title={
+            'text': "<b>Personalized Survival Projection</b>",
+            'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
+        },
+        xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        template="plotly_white",
+        hovermode="x unified",
+        height=500,
+        margin=dict(t=100, b=80, l=80)
+    )
+    st.plotly_chart(fig, use_container_width=True)
+    
+    # Stratification Logic
+    risk_score = cph.predict_partial_hazard(input_enc).iloc[0]
+    mean_risk = cph.predict_partial_hazard(results['df_encoded'].drop(columns=[meta['duration_col'], meta['event_col']])).mean()
+    strat = clinical_risk_stratification(risk_score, mean_risk)
+    st.subheader(f"Risk Category: :blue[{strat}]")
 
 # Final Cleanup
 st.markdown('</div>', unsafe_allow_html=True)

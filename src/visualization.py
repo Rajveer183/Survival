@@ -105,10 +105,14 @@ def plot_km_curves(kmf_dict: dict, title: str = "Kaplan-Meier Survival Probabili
 
 def plot_hazard_curves(naf_dict: dict, title: str = "Cumulative Hazard Function"):
     fig = go.Figure()
+    
+    # Matching the specific colors from the reference image identical to KM
+    ref_colors = ['#EAB308', '#64748B', '#EF4444', '#10B981', '#6366F1']
+    
     idx = 0
     for label, naf in naf_dict.items():
         haz = naf.cumulative_hazard_
-        color = COLORS[(idx + 2) % len(COLORS)] # Varied color
+        color = ref_colors[idx % len(ref_colors)]
         
         fig.add_trace(go.Scatter(
             x=haz.index, y=haz[label],

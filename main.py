@@ -56,10 +56,27 @@ def run_pipeline(file_path: str):
     return results
 
 if __name__ == "__main__":
-    data_path = "Colorectal Cancer Patient Data.csv"
+    data_path = "Colorectal Cancer Patient Data_new.csv"
     results = run_pipeline(data_path)
     print("\n--- Pipeline Analysis Results ---")
     print(f"Cohort Size: {results['summary_stats']['total_obs']}")
     print(f"Events: {results['summary_stats']['events']}")
     print(f"Hazard Shape: {results['hazard_shape']}")
-    print("--- Pipeline Run Successfully ---")
+    
+    # User requirement: Print model coefficients
+    print("\n--- Cox PH Model Coefficients ---")
+    print(results['cph_model'].summary[['coef', 'exp(coef)', 'p']])
+    
+    # User requirement: Verify Adj_Radio and Adj_Chem are not zero
+    summary = results['cph_model'].summary
+    for col in ['Adj_Radio', 'Adj_Chem']:
+        # Check for encoded versions too
+        found_col = [c for c in summary.index if col in c]
+        for fc in found_col:
+            coef = summary.loc[fc, 'coef']
+            print(f"Variable {fc} coefficient: {coef:.4f}")
+            assert coef != 0, f"{fc} coefficient is unexpectedly zero!"
+
+    print("\n--- Pipeline Run Successfully ---")
+    if results['summary_stats']['total_obs'] == 1062:
+        print("SUCCESS: Dataset has exactly 1062 rows.")
