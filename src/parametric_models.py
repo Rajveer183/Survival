@@ -18,7 +18,6 @@ def fit_all_parametric(df: pd.DataFrame, duration_col: str, event_col: str) -> D
         'Exponential': ExponentialFitter(),
         'Weibull': WeibullFitter(),
         'Log-Normal': LogNormalFitter(),
-        'Log-Logistic': LogLogisticFitter(),
         'Generalized Gamma': GeneralizedGammaFitter(),
         'Piecewise Exponential': PiecewiseExponentialFitter(breakpoints=[12, 24, 36])
     }

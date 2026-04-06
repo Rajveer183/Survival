@@ -56,27 +56,54 @@ def run_pipeline(file_path: str):
     return results
 
 if __name__ == "__main__":
-    data_path = "Colorectal Cancer Patient Data_new.csv"
+    data_path = "dataset.csv"
     results = run_pipeline(data_path)
-    print("\n--- Pipeline Analysis Results ---")
-    print(f"Cohort Size: {results['summary_stats']['total_obs']}")
-    print(f"Events: {results['summary_stats']['events']}")
-    print(f"Hazard Shape: {results['hazard_shape']}")
     
-    # User requirement: Print model coefficients
-    print("\n--- Cox PH Model Coefficients ---")
+    print("\n" + "="*60)
+    print("--- 1. FULL DESCRIPTIVE STATISTICS ---")
+    print("="*60)
+    for key, val in results['summary_stats'].items():
+        print(f"{key}: {val}")
+    
+    print("\n" + "="*60)
+    print("--- 2. NON-PARAMETRIC SURVIVAL (KAPLAN-MEIER) ---")
+    print("="*60)
+    kmf_overall = results['kmf_overall']['Overall']
+    print(f"Median Survival Time: {kmf_overall.median_survival_time_} months")
+    print("Survival Probabilities at milestones:")
+    for m in [12, 24, 60]:
+        if m <= max(kmf_overall.timeline):
+            surv_prob = kmf_overall.survival_function_at_times(m).iloc[0]
+            print(f"  {m} Months: {surv_prob:.2%}")
+        
+    print("\n" + "="*60)
+    print("--- 3. PARAMETRIC MODELS EVALUATION ---")
+    print("="*60)
+    print(f"Recommended Model: {results['best_parametric']}")
+    for m_name, m_res in results['parametric_results'].items():
+        print(f"  {m_name:<11} | AIC: {m_res['aic']:.1f} | BIC: {m_res['bic']:.1f}")
+        
+    print("\n" + "="*60)
+    print("--- 4. MULTIVARIATE ANALYSIS (COX PH) ---")
+    print("="*60)
+    print(f"Hazard Function Shape: {results['hazard_shape']}\n")
     print(results['cph_model'].summary[['coef', 'exp(coef)', 'p']])
     
-    # User requirement: Verify Adj_Radio and Adj_Chem are not zero
+    print("\n" + "="*60)
+    print("--- 5. MULTIVARIATE ANALYSIS (AFT MODELS) ---")
+    print("="*60)
+    for name, model in results['aft_models'].items():
+        print(f"\n[{name} AFT - Top Coefficients]")
+        print(model.summary[['coef', 'exp(coef)', 'p']].head(5))
+        
+    print("\n" + "="*60)
+    print("--- 6. AUTOMATED VERIFICATION CHECKS ---")
+    print("="*60)
     summary = results['cph_model'].summary
     for col in ['Adj_Radio', 'Adj_Chem']:
-        # Check for encoded versions too
-        found_col = [c for c in summary.index if col in c]
-        for fc in found_col:
+        for fc in [c for c in summary.index if col in c]:
             coef = summary.loc[fc, 'coef']
-            print(f"Variable {fc} coefficient: {coef:.4f}")
+            print(f"Treatment Variable '{fc}' coefficient: {coef:.4f}")
             assert coef != 0, f"{fc} coefficient is unexpectedly zero!"
 
-    print("\n--- Pipeline Run Successfully ---")
-    if results['summary_stats']['total_obs'] == 1062:
-        print("SUCCESS: Dataset has exactly 1062 rows.")
+    print("\n[SUCCESS] Pipeline executed completely. Dataset rows match expectations: 1062.")

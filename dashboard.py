@@ -154,10 +154,10 @@ def get_display_name(col):
     return DISPLAY_NAME_MAP.get(col, col)
 
 # --- DATA LOADING ---
-DATA_PATH = "Colorectal Cancer Patient Data_new.csv"
+DATA_PATH = "dataset.csv"
 
 @st.cache_data(ttl=3600)
-def get_analysis_results(data_path, mtime):
+def get_analysis_results_v6(data_path, mtime):
     # Load and run pipeline directly in memory
     results = run_pipeline(data_path)
     # Preserve raw ID_REF for display (aligned with processed rows)
@@ -169,7 +169,7 @@ def get_analysis_results(data_path, mtime):
     return results
 
 RESULTS_MTIME = os.path.getmtime(DATA_PATH)
-results = get_analysis_results(DATA_PATH, RESULTS_MTIME)
+results = get_analysis_results_v6(DATA_PATH, RESULTS_MTIME)
 df = results['df']
 df_display = results['df_display']
 meta = results['meta']
@@ -180,10 +180,9 @@ nav_options = [
     "🏠 Dashboard Overview",
     "📉 Non-Parametric Analysis",
     "📈 Parametric Survival Models",
-    "📊 Multivariate Analysis",
-    "🔬 Assumptions & Diagnostics",
-    "💡 Results Interpretation",
     "📑 Model Comparison",
+    "📊 Multivariate Analysis",
+    "💡 Results Interpretation",
     "🧮 Survival Prediction Tool"
 ]
 
@@ -199,10 +198,9 @@ section_labels = {
     "🏠 Dashboard Overview": "Dashboard Overview",
     "📉 Non-Parametric Analysis": "Non-Parametric Survival Analysis",
     "📈 Parametric Survival Models": "Parametric Survival Modeling",
-    "📊 Multivariate Analysis": "Multivariate Survival Analysis",
-    "🔬 Assumptions & Diagnostics": "Assumptions & Diagnostics",
-    "💡 Results Interpretation": "Clinical & Statistical Interpretation",
     "📑 Model Comparison": "Model Comparison & Selection",
+    "📊 Multivariate Analysis": "Multivariate Survival Analysis",
+    "💡 Results Interpretation": "Clinical & Statistical Interpretation",
     "🧮 Survival Prediction Tool": "Patient Survival Prediction Tool"
 }
 
@@ -380,34 +378,38 @@ elif selection == "📈 Parametric Survival Models":
     with col1:
         fig = go.Figure()
         real_km = results['kmf_overall']['Overall'].survival_function_
-        fig.add_trace(go.Scatter(x=real_km.index.tolist(), y=real_km['Overall'].values, name='KM Estimate', line=dict(color='black', dash='dash')))
+        fig.add_trace(go.Scatter(x=real_km.index.tolist(), y=real_km['Overall'].values, name='KM Estimate', line=dict(color='black', dash='dash'), hovertemplate="<span style='font-size:36px;'>KM Surv: %{y:.1%}</span><extra></extra>"))
         timeline = np.linspace(0, df[meta['duration_col']].max(), 100)
         fig.add_trace(go.Scatter(x=timeline.tolist(), y=fitter.survival_function_at_times(timeline).values, 
-                                 name=f'{sel_mod} Fit', line=dict(color=COLORS[0], width=CHART_LINE_WIDTH)))
+                                 name=f'{sel_mod} Fit', line=dict(color=COLORS[0], width=CHART_LINE_WIDTH), hovertemplate="<span style='font-size:36px;'>Fit: %{y:.1%}</span><extra></extra>"))
         fig.update_layout(
             template="plotly_white", 
             title={
                 'text': "<b>Parametric vs. Empirical Survival Rate</b>",
                 'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             }, 
-            xaxis={'title': 'Follow-up (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            xaxis={'title': 'Follow-up (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000', 'tickprefix': 'Duration: ', 'ticksuffix': ' Month', 'showtickprefix': 'first', 'showticksuffix': 'first', 'hoverformat': '.0f'},
             yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            margin=dict(t=80, b=80, l=80) 
+            margin=dict(t=80, b=80, l=80),
+            hovermode="x unified",
+            hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white")
         )
         st.plotly_chart(fig, use_container_width=True)
     with col2:
         fig = go.Figure()
         fig.add_trace(go.Scatter(x=timeline.tolist(), y=fitter.hazard_at_times(timeline).values, 
-                                 name=f'{sel_mod} Hazard', line=dict(color=COLORS[1], width=CHART_LINE_WIDTH)))
+                                 name=f'{sel_mod} Hazard', line=dict(color=COLORS[1], width=CHART_LINE_WIDTH), hovertemplate="<span style='font-size:36px;'>Haz: %{y:.4f}</span><extra></extra>"))
         fig.update_layout(
             template="plotly_white", 
             title={
                 'text': "<b>Instantaneous Hazard Rate Analysis</b>",
                 'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
             },
-            xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+            xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000', 'tickprefix': 'Duration: ', 'ticksuffix': ' Month', 'showtickprefix': 'first', 'showticksuffix': 'first', 'hoverformat': '.0f'},
             yaxis={'title': 'Hazard Density', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            margin=dict(t=80, b=80, l=80)
+            margin=dict(t=80, b=80, l=80),
+            hovermode="x unified",
+            hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white")
         )
         st.plotly_chart(fig, use_container_width=True)
     
@@ -437,135 +439,54 @@ elif selection == "📈 Parametric Survival Models":
             """, unsafe_allow_html=True)
 
 elif selection == "📊 Multivariate Analysis":
-    tab1, tab2 = st.tabs(["Cox PH", "AFT Models"])
-    with tab1:
-        cph = results['cph_model']
-        summary_to_show = cph.summary.copy()
-        summary_to_show.index = [get_display_name(x) for x in summary_to_show.index]
-        st.plotly_chart(plot_forest_cox(cph, display_map=DISPLAY_NAME_MAP), use_container_width=True)
-        # Robust summary display
-        if isinstance(summary_to_show.index, pd.MultiIndex): 
-            summary_to_show.index = ['_'.join(map(str, x)) for x in summary_to_show.index]
-        st.dataframe(summary_to_show, use_container_width=True)
-    with tab2:
-        aft_models = results['aft_models']
-        aft_name = st.radio("Select AFT Variant:", list(aft_models.keys()), horizontal=True)
-        aft_model = aft_models[aft_name]
-        st.write(f"**{aft_name} Model Summary**")
-        summ_aft = aft_model.summary.copy()
+    aft_models = results['aft_models']
+    aft_name = st.radio("Select AFT Variant:", list(aft_models.keys()), horizontal=True)
+    aft_model = aft_models[aft_name]
+    st.write(f"**{aft_name} Model Summary**")
+    summ_aft = aft_model.summary.copy()
+    
+    # Filter programmatic terms
+    drop_terms = ['intercept', 'rho_', 'alpha_', 'beta_']
+    mask = [not (any(term in str(idx).lower() for term in drop_terms) or str(idx).strip().lower() == 'age' or 'age (in years)' in str(idx).lower()) for idx in summ_aft.index]
+    summ_aft = summ_aft[mask]
+    
+    # Mapping labels
+    if isinstance(summ_aft.index, pd.MultiIndex):
+        # Keep only the primary location parameter to prevent duplicates in Gamma/Piecewise
+        mask_primary = [l1 in ('lambda_', 'mu_', 'lambda_0_') for l1, l2 in summ_aft.index]
+        summ_aft = summ_aft[mask_primary]
         
-        # Mapping labels
-        if isinstance(summ_aft.index, pd.MultiIndex):
-            summ_aft.index = [f"{get_display_name(l1)}_{l2}" for l1, l2 in summ_aft.index]
-        else:
-            summ_aft.index = [get_display_name(x) for x in summ_aft.index]
-            
-        summ_aft = summ_aft.reset_index()
-        # Flatten MultiIndex columns if they exist
-        if isinstance(summ_aft.columns, pd.MultiIndex):
-            summ_aft.columns = ['_'.join(map(str, col)).strip() for col in summ_aft.columns.values]
-        st.dataframe(summ_aft, use_container_width=True)
+        # Strip the structural prefix and map just the covariate name
+        summ_aft.index = [get_display_name(l2) for l1, l2 in summ_aft.index]
+    else:
+        summ_aft.index = [get_display_name(x) for x in summ_aft.index]
         
-        # Prepare data for plotting
-        plot_df = summ_aft.copy()
-        param_col = plot_df.columns[0]
-        plot_df['Parameter'] = plot_df[param_col].astype(str)
-        fig = px.bar(plot_df, x='Parameter', y='coef', title=f"<b>AFT Model: {aft_name} Clinical Effects</b>", color='coef', color_continuous_scale='Portland')
-        fig.update_layout(
-            template="plotly_white", 
-            margin=dict(t=80, b=80, l=80),
-            xaxis={'title': 'Covariate', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            yaxis={'title': 'Effect Intensity', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-        )
-        st.plotly_chart(fig, use_container_width=True)
-
-elif selection == "🔬 Assumptions & Diagnostics":
-    cph, df_enc = results['cph_model'], results['df_encoded']
+    # Groupby to flatten any rogue duplicates cleanly
+    summ_aft = summ_aft[~summ_aft.index.duplicated(keep='first')]
+        
+    summ_aft = summ_aft.reset_index()
+    # Flatten MultiIndex columns if they exist
+    if isinstance(summ_aft.columns, pd.MultiIndex):
+        summ_aft.columns = ['_'.join(map(str, col)).strip() for col in summ_aft.columns.values]
     
-    # 1. Compute Residuals first for all plots
-    res = compute_residuals(cph, df_enc)
-    m_ser = res['martingale']
-    d_ser = res['deviance']
-    if hasattr(m_ser, 'iloc'): m_ser = m_ser.iloc[:, 0] if m_ser.ndim > 1 else m_ser
-    if hasattr(d_ser, 'iloc'): d_ser = d_ser.iloc[:, 0] if d_ser.ndim > 1 else d_ser
+    # Prepare data for plotting
+    plot_df = summ_aft.copy()
+    param_col = plot_df.columns[0]
+    plot_df['Parameter'] = plot_df[param_col].astype(str)
+    fig = px.bar(plot_df, x='Parameter', y='coef', title=f"<b>AFT Model: {aft_name} Clinical Effects</b>", color='coef', color_continuous_scale='Portland')
+    fig.update_traces(
+        hovertemplate="<span style='font-size:32px; font-weight:bold;'>%{x}</span><br><span style='font-size:28px;'>Coefficient: %{y:.2f}</span><extra></extra>"
+    )
+    fig.update_layout(
+        template="plotly_white", 
+        margin=dict(t=80, b=80, l=80),
+        xaxis={'title': 'Covariate', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        yaxis={'title': 'Effect Intensity', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        hoverlabel=dict(font_size=32, font_family="Arial", bgcolor="white")
+    )
+    st.plotly_chart(fig, use_container_width=True)
     
-    res_df = pd.DataFrame({'M': m_ser, 'D': d_ser})
-    diag_df = res_df.join(df_enc[[meta['duration_col']]]).dropna()
-    diag_df.rename(columns={meta['duration_col']: 'Time', 'M': 'Martingale', 'D': 'Deviance'}, inplace=True)
-
-    # 2. Layout: 2 Above
-    CHART_HEIGHT = 450
-    col_t1, col_t2 = st.columns(2)
-    
-    with col_t1:
-        # Q-Q Plot
-        mr = res['martingale'].dropna()
-        if len(mr) > 5:
-            clean_res = np.asarray(mr.values.flatten(), dtype=np.float64)
-            try:
-                (osm, osr), (slope, intercept, r) = scipy_stats.probplot(clean_res, dist="norm")
-                fig_qq = go.Figure()
-                fig_qq.add_trace(go.Scatter(x=osm.tolist(), y=osr.tolist(), mode='markers', name='Residuals', marker=dict(color='#3b82f6')))
-                fig_qq.add_trace(go.Scatter(x=osm.tolist(), y=(slope*osm + intercept).tolist(), mode='lines', name='Normal Fit', line=dict(color='#ef4444', width=2)))
-                fig_qq.update_layout(
-                    title={
-                        'text': "<b>Normal Q-Q Plot: Residual Analysis</b>",
-                        'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
-                    },
-                    xaxis={'title': 'Theoretical Quantiles', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-                    yaxis={'title': 'Ordered Residuals', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-                    template="plotly_white", 
-                    margin=dict(t=80, b=80, l=80), 
-                    height=CHART_HEIGHT
-                )
-                st.plotly_chart(fig_qq, use_container_width=True)
-            except Exception as e:
-                st.error(f"Error generating Q-Q plot: {e}")
-        else:
-            st.warning("Insufficient residuals for Q-Q diagnostics.")
-
-    with col_t2:
-        # Martingale Trend Analysis
-        fig_mart = px.scatter(diag_df, x='Time', y='Martingale', 
-                         labels={'Time': 'Duration (Months)', 'Martingale': 'Martingale Residual'},
-                         title="Martingale Trend Analysis", color_discrete_sequence=[COLORS[0]])
-        fig_mart.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
-        fig_mart.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
-        fig_mart.update_layout(
-            template="plotly_white", 
-            title={
-                'text': "<b>Martingale Trend Analysis</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
-            },
-            xaxis={'title': 'Duration (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            yaxis={'title': 'Martingale Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            margin=dict(t=80, b=80, l=80), 
-            height=CHART_HEIGHT
-        )
-        st.plotly_chart(fig_mart, use_container_width=True)
-
-    # 3. Layout: 1 Below (Half Width)
-    st.markdown("---")
-    col_b1, col_b2 = st.columns(2)
-    with col_b1:
-        # Deviance Trend Analysis
-        fig_dev = px.scatter(diag_df, x='Time', y='Deviance', 
-                         labels={'Time': 'Duration (Months)', 'Deviance': 'Deviance Residual'},
-                         title="Deviance Trend Analysis", color_discrete_sequence=[COLORS[1]])
-        fig_dev.update_traces(marker=dict(size=10, opacity=0.7, line=dict(width=1, color='white')))
-        fig_dev.add_hline(y=0, line_dash="dash", line_color="#1e293b", line_width=2)
-        fig_dev.update_layout(
-            template="plotly_white", 
-            title={
-                'text': "<b>Deviance Trend Analysis</b>",
-                'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
-            },
-            xaxis={'title': 'Timeline (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            yaxis={'title': 'Deviance Residual', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
-            margin=dict(t=80, b=80, l=80), 
-            height=CHART_HEIGHT
-        )
-        st.plotly_chart(fig_dev, use_container_width=True)
+    st.dataframe(summ_aft, use_container_width=True)
 
 elif selection == "💡 Results Interpretation":
     # 1. Nature of Hazard Function
@@ -581,29 +502,70 @@ elif selection == "💡 Results Interpretation":
     else:
         st.info("**Analytical Insight:** The hazard follows a complex or bathtub-shaped pattern, typically seen when high early risk (surgical/treatment toxicity) is followed by a stable period and eventual late-stage recurrence.")
 
-    # 2. Clinical Evaluation of Covariate Impacts (All Factors)
+    # 2. Clinical Evaluation of Covariate Impacts (Categorized)
     st.markdown("#### 2. Clinical Evaluation of Covariate Impacts")
     summ = results['cph_model'].summary
     
-    for idx, row in summ.iterrows():
-        display_idx = get_display_name(idx)
-        hr = row['exp(coef)']
-        p_val = row['p']
-        direction = "Hazard Elevation" if hr > 1 else "Protective Effect"
-        magnitude = abs(hr - 1) * 100
+    categories = {
+        "Age Distribution": "age",
+        "Dukes Stage Severity": "stage",
+        "Gender Differences": "gender",
+        "Tumor Location": "location",
+        "Chemotherapy Outcomes": "chem",
+        "Radiotherapy Outcomes": "radio"
+    }
+
+    selected_cat = st.radio("Select Diagnostic Feature to Analyze:", list(categories.keys()), horizontal=True)
+    search_str = categories[selected_cat]
+    
+    if search_str == 'age':
+        # Protect against 'stAGE' pulling stage data into age queries
+        matches = [idx for idx in summ.index if 'age' in str(idx).lower() and 'stage' not in str(idx).lower()]
+    else:
+        matches = [idx for idx in summ.index if search_str.lower() in str(idx).lower()]
+    
+    if not matches:
+        st.markdown(f"<div style='padding: 10px; color: #94a3b8; font-style: italic; font-size: 0.9rem;'>{selected_cat} is not statistically registered in the current active clinical models.</div>", unsafe_allow_html=True)
+    else:
+        n = len(matches)
         
-        # Color coding markers
-        if p_val < 0.01: marker = "🔴 **Critical (p < 0.01)**"
-        elif p_val < 0.05: marker = "🟠 **Significant (p < 0.05)**"
-        else: marker = "🔵 **Observation (p >= 0.05)**"
-        
-        st.markdown(f"**{display_idx}** — {marker}")
-        st.markdown(f"""
-        - *Direction*: {direction}
-        - *Impact*: {magnitude:.1f}% {'increase' if hr > 1 else 'reduction'} in risk.
-        - *Hazard Ratio*: {hr:.4f}
-        """)
-        st.write("")
+        # Center cards proportionally on the screen by buffering empty columns on the sides
+        if n == 1:
+            cols = st.columns([1.5, 1, 1.5])  # 37.5%, 25%, 37.5%
+        elif n == 2:
+            cols = st.columns([1, 1, 1, 1])   # 25% each
+        elif n == 3:
+            cols = st.columns([0.5, 1, 1, 1, 0.5]) # 12.5%, 25%, 25%, 25%, 12.5%
+        else:
+            cols = st.columns(4)              # Default 4-grid
+
+        for i, idx in enumerate(matches):
+            if n == 1: col_target = cols[1]
+            elif n in [2, 3]: col_target = cols[i + 1]
+            else: col_target = cols[i % 4]
+            row = summ.loc[idx]
+            display_idx = get_display_name(idx)
+            hr = row['exp(coef)']
+            p_val = row['p']
+            direction = "Hazard Elevation" if hr > 1 else "Protective Effect"
+            magnitude = abs(hr - 1) * 100
+            
+            if p_val < 0.01: marker = "🔴 Critical (p < 0.01)"
+            elif p_val < 0.05: marker = "🟠 Significant (p < 0.05)"
+            else: marker = "🔵 Observation (p >= 0.05)"
+            
+            with col_target:
+                st.markdown(f"""
+                <div style="background-color: #f8fafc; padding: 15px; border-radius: 8px; border-top: 4px solid #3b82f6; border-left: 1px solid #e2e8f0; border-right: 1px solid #e2e8f0; border-bottom: 1px solid #e2e8f0;">
+                    <strong style="font-size: 1.1rem; color: #1e293b;">{display_idx}</strong><br/>
+                    <span style="font-size: 0.85rem; font-weight: 600;">{marker}</span><br/><br/>
+                    <span style="font-size: 0.95rem; color: #334155;">
+                    <b>Direction:</b> {direction}<br/>
+                    <b>Impact:</b> {magnitude:.1f}% {'increase' if hr > 1 else 'reduction'} in risk.<br/>
+                    <b>Hazard Ratio:</b> {hr:.4f}
+                    </span>
+                </div>
+                """, unsafe_allow_html=True)
 
     # 3. Practical Implications with better styling
     st.markdown("---")
@@ -647,8 +609,6 @@ elif selection == "📑 Model Comparison":
     comp = []
     for m, i in results['parametric_results'].items():
         comp.append({'Model': m, 'AIC': i['aic'], 'BIC': i['bic']})
-    cph = results['cph_model']
-    comp.append({'Model': 'Cox PH', 'AIC': cph.AIC_partial_, 'BIC': np.nan})
     st.dataframe(pd.DataFrame(comp).sort_values('AIC'), use_container_width=True)
 
 elif selection == "🧮 Survival Prediction Tool":
@@ -753,7 +713,8 @@ elif selection == "🧮 Survival Prediction Tool":
         name="Clinical Pathway", 
         line=dict(color='#0ea5e9', width=CHART_LINE_WIDTH),
         fill='tozeroy',
-        fillcolor='rgba(14, 165, 233, 0.05)'
+        fillcolor='rgba(14, 165, 233, 0.05)',
+        hovertemplate="<span style='font-size:36px;'>Expected: %{y:.1%}</span><extra></extra>"
     ))
     
     fig.update_layout(
@@ -761,10 +722,11 @@ elif selection == "🧮 Survival Prediction Tool":
             'text': "<b>Personalized Survival Projection</b>",
             'x': 0.5, 'xanchor': 'center', 'font': {'size': 18}
         },
-        xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
+        xaxis={'title': 'Time Post-Diagnosis (Months)', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000', 'tickprefix': 'Duration: ', 'ticksuffix': ' Month', 'showtickprefix': 'first', 'showticksuffix': 'first', 'hoverformat': '.0f'},
         yaxis={'title': 'Survival Probability', 'title_font': {'size': 18, 'color': '#000000'}, 'tickfont': {'size': 14, 'color': '#000000'}, 'showline': True, 'linecolor': '#000000'},
         template="plotly_white",
         hovermode="x unified",
+        hoverlabel=dict(font_size=36, font_family="Arial", bgcolor="white"),
         height=500,
         margin=dict(t=100, b=80, l=80)
     )

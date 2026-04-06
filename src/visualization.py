@@ -19,9 +19,8 @@ def set_premium_layout(fig, title, y_title, x_title="Duration (Months)", height=
             'x': 0.5,
             'xanchor': 'center',
             'yanchor': 'top',
-            'font': dict(size=26, color='#000000') # Scaled for high visibility
+            'font': dict(size=26) # Scaled for high visibility
         },
-        template="plotly_white",
         height=height,
         hovermode="x unified",
         margin=dict(l=80, r=40, t=100, b=80), # Increased margins to prevent axis "overwrite"
@@ -31,26 +30,26 @@ def set_premium_layout(fig, title, y_title, x_title="Duration (Months)", height=
             y=-0.3,
             xanchor="center",
             x=0.5,
-            font=dict(size=14, color='#000000')
+            font=dict(size=14)
         ),
         xaxis=dict(
-            title={'text': x_title, 'font': {'size': 20, 'color': '#000000'}}, # Solid black text
-            tickfont=dict(size=16, color='#000000'),
+            title={'text': x_title, 'font': {'size': 20}}, # Solid black text
+            tickfont=dict(size=16),
             gridcolor='#f1f5f9',
-            linecolor='#000000', # Solid black axis
+            
             showline=True,
-            zeroline=False
+            zeroline=False,
+            hoverformat='.0f'
         ),
         yaxis=dict(
-            title={'text': y_title, 'font': {'size': 20, 'color': '#000000'}}, # Solid black text
-            tickfont=dict(size=16, color='#000000'),
+            title={'text': y_title, 'font': {'size': 20}}, # Solid black text
+            tickfont=dict(size=16),
             gridcolor='#f1f5f9',
-            linecolor='#000000', # Solid black axis
+            
             showline=True,
             zeroline=False
         ),
-        plot_bgcolor='white'
-    )
+        )
     return fig
 
 def plot_km_curves(kmf_dict: dict, title: str = "Kaplan-Meier Survival Probability", p_value: float = None):
@@ -88,19 +87,6 @@ def plot_km_curves(kmf_dict: dict, title: str = "Kaplan-Meier Survival Probabili
     fig.update_yaxes(tickformat=".0%", range=[-0.02, 1.05], gridcolor='#f1f5f9')
     fig.update_xaxes(showgrid=True, gridcolor='#f1f5f9', title="Follow-up Time (Months)")
     
-    # Add P-value annotation
-    if p_value is not None:
-        fig.add_annotation(
-            x=0.02, y=0.08, # Shifted to bottom-left to avoid overlap with top-right legend
-            xref="paper", yref="paper",
-            text=f"<b>Log-rank p = {p_value:.4f}</b>",
-            showarrow=False,
-            font=dict(size=16, color='#1e3a8a'),
-            bgcolor="rgba(255,255,255,0.6)",
-            bordercolor="rgba(30,58,138,0.2)",
-            borderwidth=1, borderpad=4
-        )
-    
     return fig
 
 def plot_hazard_curves(naf_dict: dict, title: str = "Cumulative Hazard Function"):
@@ -130,6 +116,11 @@ def plot_forest_cox(cph, display_map=None):
     if isinstance(summary.index, pd.MultiIndex):
         summary.index = ['_'.join(map(str, idx)).strip() for idx in summary.index]
     
+    # Filter out specific programmatic terms
+    drop_terms = ['intercept', 'rho_', 'alpha_', 'beta_']
+    mask = [not (any(term in str(idx).lower() for term in drop_terms) or str(idx).strip().lower() == 'age' or 'age (in years)' in str(idx).lower()) for idx in summary.index]
+    summary = summary[mask]
+
     if display_map:
         summary.index = [display_map.get(x, x) for x in summary.index]
         

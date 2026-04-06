@@ -63,4 +63,4 @@ def encode_categorical(df: pd.DataFrame, categorical_cols: List[str]) -> pd.Data
     """
     One-hot encodes categorical variables for modeling.
     """
-    return pd.get_dummies(df, columns=categorical_cols, drop_first=True)
+    return pd.get_dummies(df, columns=categorical_cols, drop_first=False)
