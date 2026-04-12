@@ -149,11 +149,11 @@ def plot_distribution(series, title="In-Time Cohort Distribution"):
     fig = px.histogram(
         series, 
         nbins=20,
-        labels={'value': 'Duration (Months)'},
+        labels={'value': 'Duration (Months)', 'variable': ''},
         color_discrete_sequence=[COLORS[0]]
     )
     set_premium_layout(fig, title, "Patient Count", "Duration (Months)")
-    fig.update_layout(bargap=0.1)
+    fig.update_layout(bargap=0.1, showlegend=False)
     return fig
 
 def plot_metric_comparison(results_dict, metric='aic'):
