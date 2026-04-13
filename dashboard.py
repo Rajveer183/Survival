@@ -368,8 +368,7 @@ elif selection == "📉 Non-Parametric Analysis":
             st.markdown(f'<div class="info-box" style="background-color: {p5_bg if p5 else "#f0f9ff"}; border-left: 5px solid {p5_border if p5 else "#3b82f6"}; color: {p5_text if p5 else "#1e40af"}; padding: 10px;"><small>5-Yr</small><br/><strong>{disp_p5}</strong></div>', unsafe_allow_html=True)
 
 elif selection == "📈 Parametric Survival Models":
-    p_results, best_model = results['parametric_results'], results['best_parametric']
-    st.info(f"Recommended Model: **{best_model}**")
+    p_results = results['parametric_results']
     sel_mod = st.radio("Select Model Fit:", list(p_results.keys()), horizontal=True)
     info = p_results[sel_mod]
     fitter = info['fitter']
