@@ -66,38 +66,44 @@ if __name__ == "__main__":
         print(f"{key}: {val}")
     
     print("\n" + "="*60)
-    print("--- 2. NON-PARAMETRIC SURVIVAL (KAPLAN-MEIER) ---")
+    print("--- 2. NON-PARAMETRIC SURVIVAL ESTIMATES ---")
     print("="*60)
+    print("[Kaplan-Meier]")
     kmf_overall = results['kmf_overall']['Overall']
-    print(f"Median Survival Time: {kmf_overall.median_survival_time_} months")
-    print("Survival Probabilities at milestones:")
+    print(f"  Median Survival Time: {kmf_overall.median_survival_time_} months")
+    print("  Survival Probabilities at milestones:")
     for m in [12, 24, 60]:
         if m <= max(kmf_overall.timeline):
             surv_prob = kmf_overall.survival_function_at_times(m).iloc[0]
-            print(f"  {m} Months: {surv_prob:.2%}")
+            print(f"    {m} Months: {surv_prob:.2%}")
+            
+    print("\n[Nelson-Aalen]")
+    naf_overall = results['naf_overall']['Overall']
+    print("  Cumulative Hazard at milestones:")
+    for m in [12, 24, 60]:
+        if m <= max(naf_overall.timeline):
+            cum_haz = naf_overall.cumulative_hazard_at_times(m).iloc[0]
+            print(f"    {m} Months: {cum_haz:.4f}")
         
     print("\n" + "="*60)
     print("--- 3. PARAMETRIC MODELS EVALUATION ---")
     print("="*60)
-    print(f"Recommended Model: {results['best_parametric']}")
+    print(f"Recommended Model: {results['best_parametric']}\n")
     for m_name, m_res in results['parametric_results'].items():
-        print(f"  {m_name:<11} | AIC: {m_res['aic']:.1f} | BIC: {m_res['bic']:.1f}")
-        
+        print(f"[{m_name}]")
+        print(f"  AIC: {m_res['aic']:.1f} | BIC: {m_res['bic']:.1f} | Log-Likelihood: {m_res['log_likelihood']:.1f}")
+        params = ", ".join([f"{k}: {v:.4f}" for k, v in m_res['params'].items()])
+        print(f"  Parameters: {params}")
+
     print("\n" + "="*60)
-    print("--- 4. MULTIVARIATE ANALYSIS (COX PH) ---")
-    print("="*60)
-    print(f"Hazard Function Shape: {results['hazard_shape']}\n")
-    print(results['cph_model'].summary[['coef', 'exp(coef)', 'p']])
-    
-    print("\n" + "="*60)
-    print("--- 5. MULTIVARIATE ANALYSIS (AFT MODELS) ---")
+    print("--- 4. MULTIVARIATE ANALYSIS (AFT MODELS) ---")
     print("="*60)
     for name, model in results['aft_models'].items():
         print(f"\n[{name} AFT - Top Coefficients]")
         print(model.summary[['coef', 'exp(coef)', 'p']].head(5))
         
     print("\n" + "="*60)
-    print("--- 6. AUTOMATED VERIFICATION CHECKS ---")
+    print("--- 5. AUTOMATED VERIFICATION CHECKS ---")
     print("="*60)
     summary = results['cph_model'].summary
     for col in ['Adj_Radio', 'Adj_Chem']:
